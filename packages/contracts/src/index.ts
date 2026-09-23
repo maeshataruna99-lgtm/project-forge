@@ -1,0 +1,45 @@
+import { z } from 'zod';
+
+const projectName = z.string().min(2).max(50).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers, and single hyphens');
+const color = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex color');
+
+export const projectConfigSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  project: z.strictObject({
+    name: projectName,
+    blueprint: z.enum(['blank-fullstack', 'ecommerce']),
+    shape: z.enum(['api-only', 'frontend-only', 'fullstack']),
+  }),
+  repository: z.strictObject({
+    layout: z.enum(['monorepo', 'single-app']),
+    packageManager: z.enum(['pnpm']),
+    taskRunner: z.enum(['none']),
+  }),
+  stack: z.strictObject({
+    language: z.enum(['typescript']),
+    backend: z.enum(['nestjs', 'none']),
+    frontend: z.enum(['vue-vite', 'none']),
+    database: z.enum(['postgresql', 'none']),
+    orm: z.enum(['prisma', 'none']),
+  }),
+  company: z.strictObject({
+    mode: z.enum(['single', 'multi']),
+    superAdminScope: z.enum(['global', 'company']),
+  }),
+  features: z.strictObject({
+    auth: z.boolean(),
+    rbac: z.boolean(),
+    navigation: z.enum(['dynamic', 'none']),
+    audit: z.boolean(),
+    redis: z.boolean(),
+    docker: z.boolean(),
+  }),
+  theme: z.strictObject({
+    preset: z.enum(['modern-saas']),
+    mode: z.enum(['light', 'dark']),
+    primary: color,
+    accent: color,
+  }),
+});
+
+export type ProjectConfig = z.infer<typeof projectConfigSchema>;
