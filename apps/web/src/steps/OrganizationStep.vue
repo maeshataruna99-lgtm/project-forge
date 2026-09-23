@@ -7,7 +7,7 @@ const emit = defineEmits<{ change: [path: string, value: string] }>();
 
 <template>
   <section aria-labelledby="organization-heading">
-    <h2 id="organization-heading">Organization and features</h2>
+    <h2 id="organization-heading" tabindex="-1">Organization and features</h2>
     <p class="step-description">Set the company model and optional capabilities.</p>
     <div class="field-grid">
       <ChoiceField id="companyMode" label="Company mode" :model-value="config.company.mode" :choices="catalog.companyModes" @update:model-value="emit('change', 'company.mode', $event)" />

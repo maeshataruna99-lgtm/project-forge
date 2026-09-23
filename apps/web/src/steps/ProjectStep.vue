@@ -2,17 +2,17 @@
 import type { GeneratorCatalog, ProjectConfig } from '@project-forge/contracts';
 import ChoiceField from '../components/ChoiceField.vue';
 
-defineProps<{ config: ProjectConfig; catalog: GeneratorCatalog; nameError?: string }>();
+defineProps<{ config: ProjectConfig; catalog: GeneratorCatalog; projectName: string; nameError?: string }>();
 const emit = defineEmits<{ change: [path: string, value: string] }>();
 </script>
 
 <template>
   <section aria-labelledby="project-heading">
-    <h2 id="project-heading">Project</h2>
+    <h2 id="project-heading" tabindex="-1">Project</h2>
     <p class="step-description">Name your starter and choose its foundation.</p>
     <div class="field">
       <label for="projectName">Project name</label>
-      <input id="projectName" name="projectName" type="text" required minlength="2" maxlength="50" pattern="[a-z][a-z0-9]*(?:-[a-z0-9]+)*" :value="config.project.name" :aria-invalid="nameError ? 'true' : undefined" :aria-describedby="nameError ? 'project-name-error' : 'project-name-help'" @input="emit('change', 'project.name', ($event.target as HTMLInputElement).value)" />
+      <input id="projectName" name="projectName" type="text" required minlength="2" maxlength="50" pattern="[a-z][a-z0-9]*(?:-[a-z0-9]+)*" :value="projectName" :aria-invalid="nameError ? 'true' : undefined" :aria-describedby="nameError ? 'project-name-help project-name-error' : 'project-name-help'" @input="emit('change', 'project.name', ($event.target as HTMLInputElement).value)" />
       <p id="project-name-help" class="field-help">2–50 characters; lowercase letters, numbers, and single hyphens.</p>
       <p v-if="nameError" id="project-name-error" role="alert" class="field-error">{{ nameError }}</p>
     </div>

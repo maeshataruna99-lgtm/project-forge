@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import App from './App.vue';
+import ProjectStep from './steps/ProjectStep.vue';
 
 const reason = 'No generator template yet';
 const available = (value: string, label: string) => ({ value, label, available: true });
@@ -32,13 +33,15 @@ const catalog = {
 
 async function setup() {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(catalog)));
-  const wrapper = mount(App);
+  const host = document.createElement('div');
+  document.body.append(host);
+  const wrapper = mount(App, { attachTo: host });
   await new Promise(resolve => setTimeout(resolve, 0));
   await nextTick();
   return wrapper;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ''; });
 
 describe('configuration wizard', () => {
   it('shows five named steps and advances and returns with keyboard-operable buttons', async () => {
@@ -67,7 +70,7 @@ describe('configuration wizard', () => {
     expect(wrapper.find('h2').text()).toBe('Project');
     const error = wrapper.get('[role="alert"]');
     expect(error.text()).toMatch(/lowercase/i);
-    expect(input.attributes('aria-describedby')).toBe(error.attributes('id'));
+    expect(input.attributes('aria-describedby')?.split(' ')).toEqual(['project-name-help', error.attributes('id')]);
     await input.setValue('valid-app');
     await wrapper.get('button[type="submit"]').trigger('click');
     expect(wrapper.find('h2').text()).toBe('Stack');
@@ -96,5 +99,33 @@ describe('configuration wizard', () => {
     const mode = wrapper.get('select#themeMode');
     await mode.setValue('dark');
     expect((mode.element as HTMLSelectElement).value).toBe('dark');
+  });
+
+  it('moves focus to each new heading after Next, Back, and step navigation', async () => {
+    const wrapper = await setup();
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await nextTick();
+    expect(document.activeElement).toBe(wrapper.get('h2').element);
+    expect(wrapper.get('h2').attributes('tabindex')).toBe('-1');
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await nextTick();
+    expect(document.activeElement).toBe(wrapper.get('h2').element);
+    await wrapper.get('button[aria-label="Go to Project"]').trigger('click');
+    await nextTick();
+    expect(document.activeElement).toBe(wrapper.get('h2').element);
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await wrapper.get('button[aria-label="Back to Project"]').trigger('click');
+    await nextTick();
+    expect(document.activeElement).toBe(wrapper.get('h2').element);
+  });
+
+  it('rejects an invalid config update without changing the selected choice', async () => {
+    const wrapper = await setup();
+    wrapper.getComponent(ProjectStep).vm.$emit('change', 'project.blueprint', 'missing-template');
+    await nextTick();
+    expect((wrapper.get('#blueprint').element as HTMLSelectElement).value).toBe('blank-fullstack');
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await wrapper.get('button[aria-label="Back to Project"]').trigger('click');
+    expect((wrapper.get('#blueprint').element as HTMLSelectElement).value).toBe('blank-fullstack');
   });
 });

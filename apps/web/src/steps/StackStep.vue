@@ -7,7 +7,7 @@ const emit = defineEmits<{ change: [path: string, value: string] }>();
 
 <template>
   <section aria-labelledby="stack-heading">
-    <h2 id="stack-heading">Stack</h2>
+    <h2 id="stack-heading" tabindex="-1">Stack</h2>
     <p class="step-description">Choose the tools used by your project.</p>
     <div class="field-grid">
       <ChoiceField id="language" label="Language" :model-value="config.stack.language" :choices="catalog.languages" @update:model-value="emit('change', 'stack.language', $event)" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 import { projectConfigSchema, type GeneratorCatalog, type ProjectConfig } from '@project-forge/contracts';
 import { fetchCatalog } from './api/generator';
 import WizardStepper from './components/WizardStepper.vue';
@@ -13,6 +13,8 @@ const current = ref(0);
 const catalog = ref<GeneratorCatalog | null>(null);
 const catalogError = ref('');
 const nameError = ref('');
+const projectNameDraft = ref('sample-app');
+const wizardForm = ref<HTMLFormElement | null>(null);
 const config = ref<ProjectConfig>({
   schemaVersion: 2,
   project: { name: 'sample-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
@@ -28,18 +30,27 @@ onMounted(async () => {
   catch (error) { catalogError.value = error instanceof Error ? error.message : 'Could not load choices.'; }
 });
 
+watch(current, async () => {
+  await nextTick();
+  wizardForm.value?.querySelector('h2')?.focus();
+});
+
 function update(path: string, value: string) {
-  const [section, key] = path.split('.');
-  if (!section || !key || !(section in config.value)) return;
+  const [section, key, extra] = path.split('.');
+  if (!section || !key || extra || !(section in config.value)) return;
+  if (path === 'project.name') {
+    projectNameDraft.value = value;
+    nameError.value = '';
+  }
   const original = config.value[section as keyof ProjectConfig];
   if (typeof original !== 'object') return;
   const nextValue = section === 'features' && key !== 'navigation' ? value === 'true' : value;
-  config.value = { ...config.value, [section]: { ...original, [key]: nextValue } } as ProjectConfig;
-  if (path === 'project.name') nameError.value = '';
+  const result = projectConfigSchema.safeParse({ ...config.value, [section]: { ...original, [key]: nextValue } });
+  if (result.success) config.value = result.data;
 }
 
 function validProjectName() {
-  const result = projectConfigSchema.shape.project.shape.name.safeParse(config.value.project.name);
+  const result = projectConfigSchema.shape.project.shape.name.safeParse(projectNameDraft.value);
   nameError.value = result.success ? '' : (result.error.issues[0]?.message ?? 'Enter a valid project name.');
   return result.success;
 }
@@ -63,13 +74,13 @@ function navigate(index: number) { if (index >= 0 && index < current.value) curr
     <p v-else-if="!catalog" role="status">Loading project choices…</p>
     <template v-else>
       <WizardStepper :steps="steps" :current="current" @navigate="navigate" />
-      <form class="wizard-card" novalidate @submit.prevent="next">
-        <ProjectStep v-if="current === 0" :config="config" :catalog="catalog" :name-error="nameError" @change="update" />
+      <form ref="wizardForm" class="wizard-card" novalidate @submit.prevent="next">
+        <ProjectStep v-if="current === 0" :config="config" :catalog="catalog" :project-name="projectNameDraft" :name-error="nameError" @change="update" />
         <StackStep v-else-if="current === 1" :config="config" :catalog="catalog" @change="update" />
         <OrganizationStep v-else-if="current === 2" :config="config" :catalog="catalog" @change="update" />
         <ThemeStep v-else-if="current === 3" :config="config" :catalog="catalog" @change="update" />
         <section v-else aria-labelledby="review-heading">
-          <h2 id="review-heading">Review and generate</h2>
+          <h2 id="review-heading" tabindex="-1">Review and generate</h2>
           <p class="step-description">Review and generation will be available in the next step of this build.</p>
           <p><strong>Project:</strong> {{ config.project.name }}</p>
         </section>

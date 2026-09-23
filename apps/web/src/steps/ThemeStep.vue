@@ -7,7 +7,7 @@ const emit = defineEmits<{ change: [path: string, value: string] }>();
 
 <template>
   <section aria-labelledby="theme-heading">
-    <h2 id="theme-heading">Theme</h2>
+    <h2 id="theme-heading" tabindex="-1">Theme</h2>
     <p class="step-description">Choose a preset and colors for the starter.</p>
     <div class="field-grid">
       <ChoiceField id="themePreset" label="Theme preset" :model-value="config.theme.preset" :choices="catalog.themes" @update:model-value="emit('change', 'theme.preset', $event)" />
