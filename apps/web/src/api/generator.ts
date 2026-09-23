@@ -1,15 +1,29 @@
-import { z } from 'zod';
-import { catalogSchema, type GeneratorCatalog, type ProjectConfig } from '@project-forge/contracts';
+import { z } from "zod";
+import {
+  catalogSchema,
+  projectConfigSchema,
+  uiLayoutSchema,
+  type GeneratorCatalog,
+  type ProjectConfig,
+} from "@project-forge/contracts";
 
 const generationPlanSchema = z.strictObject({
+  templatePack: z.enum(["typescript-nest-vue", "php-laravel"]),
   projectName: z.string(),
-  profile: z.literal('minimal'),
+  profile: projectConfigSchema.shape.project.shape.profile,
+  blueprint: projectConfigSchema.shape.project.shape.blueprint,
+  shape: projectConfigSchema.shape.project.shape.shape,
+  layout: projectConfigSchema.shape.repository.shape.layout,
+  capabilities: z.array(z.string()),
+  features: projectConfigSchema.shape.features,
+  stack: projectConfigSchema.shape.stack,
+  company: projectConfigSchema.shape.company,
+  dataMode: projectConfigSchema.shape.dataMode,
+  deploymentProfile: projectConfigSchema.shape.deploymentProfile,
+  outputDestination: projectConfigSchema.shape.output.shape.destination,
+  uiLayout: uiLayoutSchema.optional(),
   files: z.array(z.string()),
-  theme: z.strictObject({
-    mode: z.enum(['light', 'dark']),
-    primary: z.string(),
-    accent: z.string(),
-  }),
+  theme: projectConfigSchema.shape.theme,
 });
 
 export type GenerationPlan = z.infer<typeof generationPlanSchema>;
@@ -24,14 +38,16 @@ export class GeneratorApiError extends Error {
     public readonly correlationId?: string,
   ) {
     super(message);
-    this.name = 'GeneratorApiError';
+    this.name = "GeneratorApiError";
   }
 }
 
 const errorPayloadSchema = z.object({
   code: z.string().optional(),
   message: z.string().optional(),
-  issues: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+  issues: z
+    .array(z.object({ path: z.string(), message: z.string() }))
+    .optional(),
   correlationId: z.string().optional(),
 });
 
@@ -40,12 +56,26 @@ async function requireSuccess(response: Response): Promise<Response> {
   const body = await response.json().catch(() => null);
   const parsed = errorPayloadSchema.safeParse(body);
   const error = parsed.success ? parsed.data : {};
-  const message = error.message || error.issues?.map(issue => issue.message).join('; ') || error.code || `Request failed (${response.status})`;
-  throw new GeneratorApiError(message, response.status, error.code, error.issues, error.correlationId);
+  const message =
+    error.message ||
+    error.issues?.map((issue) => issue.message).join("; ") ||
+    error.code ||
+    `Request failed (${response.status})`;
+  throw new GeneratorApiError(
+    message,
+    response.status,
+    error.code,
+    error.issues,
+    error.correlationId,
+  );
 }
 
 function jsonRequest(config: ProjectConfig): RequestInit {
-  return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) };
+  return {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  };
 }
 
 async function request(url: string, init?: RequestInit): Promise<Response> {
@@ -54,31 +84,45 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
   } catch (error) {
     if (error instanceof GeneratorApiError) throw error;
     if (error instanceof Error) throw new GeneratorApiError(error.message);
-    throw new GeneratorApiError('Network request failed');
+    throw new GeneratorApiError("Network request failed");
   }
 }
 
 export async function fetchCatalog(): Promise<GeneratorCatalog> {
-  const response = await request('/generator/catalog');
+  const response = await request("/generator/catalog");
   return catalogSchema.parse(await response.json());
 }
 
-export async function validateConfig(config: ProjectConfig): Promise<GenerationPlan> {
-  const response = await request('/generator/validate', jsonRequest(config));
+export async function validateConfig(
+  config: ProjectConfig,
+): Promise<GenerationPlan> {
+  const response = await request("/generator/validate", jsonRequest(config));
   return generationPlanSchema.parse(await response.json());
 }
 
 function archiveFilename(disposition: string | null, fallback: string): string {
-  const match = disposition?.match(/(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]*))/i);
+  const match = disposition?.match(
+    /(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]*))/i,
+  );
   const filename = match?.[1] ?? match?.[2];
-  if (!filename || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.zip$/i.test(filename) || filename.includes('..')) return fallback;
+  if (
+    !filename ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.zip$/i.test(filename) ||
+    filename.includes("..")
+  )
+    return fallback;
   return filename;
 }
 
-export async function downloadArchive(config: ProjectConfig): Promise<{ blob: Blob; filename: string }> {
-  const response = await request('/generator/archive', jsonRequest(config));
+export async function downloadArchive(
+  config: ProjectConfig,
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await request("/generator/archive", jsonRequest(config));
   return {
     blob: await response.blob(),
-    filename: archiveFilename(response.headers.get('Content-Disposition'), `${config.project.name}.zip`),
+    filename: archiveFilename(
+      response.headers.get("Content-Disposition"),
+      `${config.project.name}.zip`,
+    ),
   };
 }

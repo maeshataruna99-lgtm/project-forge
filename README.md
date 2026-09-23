@@ -20,14 +20,13 @@ pnpm typecheck
 pnpm web:build
 ```
 
-Start the API and web app in separate terminals:
+Start the API and web app together from the repository root:
 
 ```sh
-pnpm --filter @project-forge/api dev
-pnpm --filter @project-forge/web dev
+pnpm dev
 ```
 
-Open the URL printed by Vite. The web development server proxies `/generator` and `/health` to the API on port 3000. For production, serve the built web app and API under one origin: route `/generator/*` and `/health` to the API, and serve web assets for other paths. The browser calls relative API URLs.
+This starts the API on port 3000 and the web development server. Open the URL printed by Vite. It proxies `/generator` and `/health` to the API. To start only one service, use `pnpm --filter @project-forge/api dev` or `pnpm --filter @project-forge/web dev`. For production, serve the built web app and API under one origin: route `/generator/*` and `/health` to the API, and serve web assets for other paths. The browser calls relative API URLs.
 
 The current supported configuration is the [minimal example](examples/minimal-config.json): Blank Fullstack, fullstack monorepo, TypeScript, NestJS, Vue 3/Vite, PostgreSQL, Prisma, pnpm, single company, and minimal profile with enterprise features disabled. The wizard disables unsupported catalog choices and explains why; supported theme modes and colors remain editable. The API serves `GET /health`, `GET /generator/catalog`, `POST /generator/validate`, and `POST /generator/archive` on port 3000. Send the example configuration as JSON to either POST endpoint; archive returns `sample-app.zip`.
 

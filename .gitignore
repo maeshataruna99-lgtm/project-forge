@@ -7,3 +7,8 @@ coverage/
 !.env.example
 .DS_Store
 .superpowers/
+.codex-remote-attachments/
+
+# Scratch plans and brainstorm specs stay local unless intentionally versioned.
+docs/superpowers/plans/
+docs/superpowers/specs/
