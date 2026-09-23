@@ -19,3 +19,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm typecheck
+      - name: Verify generated starter
+        run: |
+          generated_dir="$(pnpm --silent smoke:extract)"
+          cd "$generated_dir"
+          pnpm install
+          pnpm build
+          pnpm test
+          DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/DATABASE?schema=public' pnpm exec prisma validate --schema prisma/schema.prisma

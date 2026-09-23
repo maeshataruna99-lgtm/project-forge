@@ -3,12 +3,12 @@ import type { ProjectConfig } from '@project-forge/contracts';
 import { catalog, validateCompatibility } from './index';
 
 const base: ProjectConfig = {
-  schemaVersion: 1,
-  project: { name: 'my-app', blueprint: 'blank-fullstack', shape: 'fullstack' },
+  schemaVersion: 2,
+  project: { name: 'my-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
   stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
   company: { mode: 'single', superAdminScope: 'company' },
-  features: { auth: true, rbac: true, navigation: 'dynamic', audit: true, redis: false, docker: false },
+  features: { auth: false, rbac: false, navigation: 'none', audit: false, redis: false, docker: false },
   theme: { preset: 'modern-saas', mode: 'light', primary: '#2563EB', accent: '#F59E0B' },
 };
 
@@ -41,9 +41,21 @@ describe('first template registry', () => {
     );
   });
 
-  it('requires authentication when RBAC is enabled', () => {
-    expect(validateCompatibility({ ...base, features: { ...base.features, auth: false } })).toContainEqual(
-      expect.objectContaining({ path: 'features.auth', code: 'FEATURE_DEPENDENCY' }),
+  it('rejects enterprise profile until its template exists', () => {
+    expect(validateCompatibility({ ...base, project: { ...base.project, profile: 'enterprise' } })).toContainEqual(
+      expect.objectContaining({ path: 'project.profile', code: 'TEMPLATE_UNAVAILABLE' }),
+    );
+  });
+
+  it.each(['auth', 'rbac', 'audit'] as const)('rejects %s until it is generated', feature => {
+    expect(validateCompatibility({ ...base, features: { ...base.features, [feature]: true } })).toContainEqual(
+      expect.objectContaining({ path: `features.${feature}`, code: 'FEATURE_UNAVAILABLE' }),
+    );
+  });
+
+  it('rejects multi-company until company isolation is generated', () => {
+    expect(validateCompatibility({ ...base, company: { ...base.company, mode: 'multi' } })).toContainEqual(
+      expect.objectContaining({ path: 'company.mode', code: 'TEMPLATE_UNAVAILABLE' }),
     );
   });
 
