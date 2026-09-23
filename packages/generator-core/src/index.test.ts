@@ -100,6 +100,38 @@ describe('generator core', () => {
     expect(scopeQuery(identity, { companyId: 'company-b', status: 'active' })).toEqual({ companyId: 'company-a', status: 'active' });
   });
 
+  it('composes RBAC, dynamic navigation, and audit fragments only when selected', () => {
+    const secured = {
+      ...config,
+      features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
+    };
+    const plan = createPlan(secured);
+    expect(plan.files).toContain('apps/api/src/rbac/permission.guard.ts');
+    expect(plan.files).toContain('apps/api/src/navigation/navigation.service.ts');
+    expect(plan.files).toContain('apps/api/src/navigation/navigation.controller.ts');
+    expect(plan.files).toContain('apps/api/src/audit/audit.service.ts');
+    expect(plan.files).toContain('apps/api/src/audit/audit.controller.ts');
+    expect(plan.files).toContain('apps/api/src/rbac/seed-access-control.test.ts');
+    expect(plan.files).toContain('apps/web/src/components/StarterAuth.vue');
+    const files = unzipSync(createArchive(secured));
+    const main = strFromU8(files['sample-app/apps/api/src/main.ts']!);
+    expect(main).toContain("import { RbacModule } from './rbac/rbac.module';");
+    expect(main).toContain("import { NavigationModule } from './navigation/navigation.module';");
+    expect(main).toContain("import { AuditModule } from './audit/audit.module';");
+    const schema = strFromU8(files['sample-app/prisma/schema.prisma']!);
+    expect(schema).toContain('model Permission');
+    expect(schema).toContain('model NavigationItem');
+    expect(schema).toContain('model AuditEvent');
+    expect(JSON.parse(strFromU8(files['sample-app/package.json']!)).scripts['db:seed']).toBe('node prisma/seed.mjs');
+    const authUi = strFromU8(files['sample-app/apps/web/src/components/StarterAuth.vue']!);
+    expect(authUi).toContain("fetch('/api/navigation'");
+    expect(authUi).toContain('accessToken.value = result.accessToken');
+    expect(authUi).not.toContain('localStorage');
+    expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain('<StarterAuth />');
+    expect(Object.values(files).some(file => strFromU8(file).includes('__'))).toBe(false);
+    expect(createPlan(config).files).not.toContain('apps/api/src/rbac/permission.guard.ts');
+  });
+
   it('distinguishes malformed input from an unavailable template', () => {
     try {
       createPlan({ ...config, project: { ...config.project, name: '../bad' } });

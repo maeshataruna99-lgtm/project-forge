@@ -20,6 +20,14 @@ const configs = [
       features: { ...config.features, auth: true },
     },
   },
+  {
+    name: 'enterprise-access-control',
+    value: {
+      ...config,
+      project: { ...config.project, profile: 'enterprise' },
+      features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
+    },
+  },
 ];
 for (const selected of configs) {
   const files = unzipSync(createArchive(selected.value));

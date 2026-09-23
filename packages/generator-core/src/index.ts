@@ -79,7 +79,12 @@ export function createPlan(input: unknown): GenerationPlan {
   return {
     projectName: config.project.name,
     profile: config.project.profile,
-    capabilities: config.features.auth || config.project.profile === 'enterprise' ? ['auth', 'company-scope'] : [],
+    capabilities: [
+      ...(config.features.auth || config.project.profile === 'enterprise' ? ['auth', 'company-scope'] : []),
+      ...(config.features.rbac ? ['rbac'] : []),
+      ...(config.features.navigation === 'dynamic' ? ['dynamic-navigation'] : []),
+      ...(config.features.audit ? ['audit'] : []),
+    ],
     files: registeredFiles,
     theme: { mode: config.theme.mode, primary: config.theme.primary, accent: config.theme.accent },
   };
@@ -125,6 +130,79 @@ model CompanyMembership {
   @@index([companyId])
 }
 ` : '';
+  const rbacSchema = config.features.rbac ? `
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  description String
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String      @id @default(cuid())
+  role         CompanyRole
+  permissionId String
+  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+}
+` : '';
+  const navigationSchema = config.features.navigation === 'dynamic' ? `
+model NavigationItem {
+  id                 String   @id @default(cuid())
+  key                String   @unique
+  label              String
+  href               String
+  requiredPermission String
+  sortOrder          Int      @default(0)
+}
+` : '';
+  const auditSchema = config.features.audit ? `
+model AuditEvent {
+  id          String   @id @default(cuid())
+  companyId   String
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+` : '';
+  const featureImports = [
+    ...(config.features.rbac ? ["import { RbacModule } from './rbac/rbac.module';"] : []),
+    ...(config.features.navigation === 'dynamic' ? ["import { NavigationModule } from './navigation/navigation.module';"] : []),
+    ...(config.features.audit ? ["import { AuditModule } from './audit/audit.module';"] : []),
+  ].join('\n');
+  const featureModules = [
+    ...(config.features.rbac ? ['RbacModule'] : []),
+    ...(config.features.navigation === 'dynamic' ? ['NavigationModule'] : []),
+    ...(config.features.audit ? ['AuditModule'] : []),
+  ].join(', ');
+  const rbacReadme = config.features.rbac ? `
+## Role based permissions
+
+The API protects project reads and writes with server side permission guards. Members can read projects; company administrators can also write projects, manage members and settings, and read audit events. Re-run pnpm db:seed safely to upsert the permission and role mappings.
+` : '';
+  const auditReadme = config.features.audit ? `
+## Audit trail
+
+Successful authenticated write requests create company-scoped audit events. Metadata is bounded and credential fields are redacted before storage. The audit endpoint requires the audit:read permission.
+` : '';
+  const seedCommand = config.features.rbac ? 'node prisma/seed.mjs' : 'echo No RBAC seed data selected';
+  const seedNavigation = config.features.navigation === 'dynamic' ? 'true' : 'false';
+  const authFrontendImport = auth ? "import StarterAuth from './components/StarterAuth.vue';" : '';
+  const authFrontendUi = auth ? '<StarterAuth />' : '';
+  const navItems = config.features.navigation === 'dynamic'
+    ? '<nav aria-label="Your available sections"><a v-for="item in navigation" :key="item.key" :href="item.href">{{ item.label }}</a></nav>'
+    : '';
+  const navigationFetch = config.features.navigation === 'dynamic'
+    ? "const menu = await fetch('/api/navigation', { headers: { Authorization: `Bearer ${result.accessToken}` } }); if (menu.ok) navigation.value = await menu.json() as NavigationItem[];"
+    : '';
   const authReadme = auth ? `
 ## Authentication and company scope
 
@@ -135,11 +213,24 @@ This profile includes company registration, salted scrypt password hashing, 15-m
     .replaceAll('__PRIMARY_COLOR__', config.theme.primary)
     .replaceAll('__ACCENT_COLOR__', config.theme.accent)
     .replaceAll('__THEME_MODE__', config.theme.mode)
+    .replaceAll('__PROFILE_LABEL__', config.project.profile === 'enterprise' ? 'Enterprise' : 'Minimal')
+    .replaceAll('/*__AUTH_FRONTEND_IMPORT__*/', authFrontendImport)
+    .replaceAll('/*__AUTH_FRONTEND_SETUP__*/', '')
+    .replaceAll('<!--__AUTH_FRONTEND_UI__-->', authFrontendUi)
+    .replaceAll('<!--__NAVIGATION_ITEMS__-->', navItems)
+    .replaceAll('/*__NAVIGATION_FETCH__*/', navigationFetch)
     .replaceAll('/*__AUTH_IMPORT__*/', auth ? "import { AuthModule } from './auth/auth.module';" : '')
     .replaceAll('/*__AUTH_MODULE__*/', auth ? 'AuthModule' : '')
+    .replaceAll('/*__FEATURE_IMPORTS__*/', featureImports)
+    .replaceAll('/*__FEATURE_MODULES__*/', featureModules ? `, ${featureModules}` : '')
     .replaceAll('/*__AUTH_SECRET__*/', auth ? 'AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters' : '')
-    .replaceAll('/*__AUTH_PRISMA_SCHEMA__*/', authSchema)
-    .replaceAll('/*__AUTH_README__*/', authReadme);
+    .replaceAll('/*__AUTH_PRISMA_SCHEMA__*/', `${authSchema}${rbacSchema}${navigationSchema}${auditSchema}`)
+    .replaceAll('  /*__AUDIT_COMPANY_RELATION__*/', config.features.audit ? '  auditEvents AuditEvent[]' : '')
+    .replaceAll('__SEED_COMMAND__', seedCommand)
+    .replaceAll('__SEED_NAVIGATION__', seedNavigation)
+    .replaceAll('/*__AUTH_README__*/', authReadme)
+    .replaceAll('/*__RBAC_README__*/', rbacReadme)
+    .replaceAll('/*__AUDIT_README__*/', auditReadme);
 }
 
 function prepareFiles(input: unknown): Record<string, Uint8Array> {

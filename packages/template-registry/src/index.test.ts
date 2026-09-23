@@ -62,9 +62,37 @@ describe('first template registry', () => {
     expect(validateCompatibility({ ...base, features: { ...base.features, auth: true } })).toEqual([]);
   });
 
-  it.each(['rbac', 'audit'] as const)('rejects %s until it is generated', feature => {
+  it.each(['rbac', 'audit'] as const)('rejects %s until authentication exists', feature => {
     expect(validateCompatibility({ ...base, features: { ...base.features, [feature]: true } })).toContainEqual(
-      expect.objectContaining({ path: `features.${feature}`, code: 'FEATURE_UNAVAILABLE' }),
+      expect.objectContaining({ path: 'features.auth', code: 'FEATURE_DEPENDENCY' }),
+    );
+  });
+
+  it('reports stable dependency paths for RBAC, dynamic navigation, and audit', () => {
+    expect(validateCompatibility({ ...base, features: { ...base.features, rbac: true } })).toContainEqual(
+      expect.objectContaining({ path: 'features.auth', code: 'FEATURE_DEPENDENCY' }),
+    );
+    expect(validateCompatibility({ ...base, features: { ...base.features, navigation: 'dynamic' } })).toContainEqual(
+      expect.objectContaining({ path: 'features.rbac', code: 'FEATURE_DEPENDENCY' }),
+    );
+    expect(validateCompatibility({ ...base, features: { ...base.features, audit: true } })).toContainEqual(
+      expect.objectContaining({ path: 'features.auth', code: 'FEATURE_DEPENDENCY' }),
+    );
+  });
+
+  it('supports RBAC, permission-filtered navigation, and audit only when their identity dependencies exist', () => {
+    const features = { ...base.features, auth: true, rbac: true, navigation: 'dynamic' as const, audit: true };
+    expect(validateCompatibility({ ...base, features })).toEqual([]);
+  });
+
+  it('reports server-only authorization controls on a frontend-only project shape', () => {
+    const candidate = {
+      ...base,
+      project: { ...base.project, shape: 'frontend-only' as const },
+      features: { ...base.features, auth: true, rbac: true, navigation: 'dynamic' as const, audit: true },
+    };
+    expect(validateCompatibility(candidate)).toContainEqual(
+      expect.objectContaining({ path: 'project.shape', code: 'TEMPLATE_UNAVAILABLE' }),
     );
   });
 
@@ -151,9 +179,18 @@ describe('first template registry', () => {
           'auth', 'rbac', 'audit', 'redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp',
           'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
         ].includes(category) ? choice.value === 'true' : choice.value;
-        const candidate = section === 'root'
+        const candidate = (section === 'root'
           ? { ...base, [field]: value }
-          : { ...base, [section]: { ...base[section], [field]: value } };
+          : { ...base, [section]: { ...base[section], [field]: value } }) as ProjectConfig;
+        for (const requirement of choice.requires ?? []) {
+          const parts = requirement.path.split('.');
+          let target: Record<string, unknown> = candidate;
+          for (const part of parts.slice(0, -1)) {
+            if (!target[part] || typeof target[part] !== 'object') target[part] = {};
+            target = target[part] as Record<string, unknown>;
+          }
+          target[parts.at(-1)!] = requirement.equals;
+        }
         expect(validateCompatibility(candidate).length === 0, `${category}.${choice.value}`).toBe(choice.available);
       }
     }

@@ -69,6 +69,8 @@ export const catalogChoiceSchema = z.strictObject({
   label: z.string().min(1),
   available: z.boolean(),
   reason: z.string().min(1).optional(),
+  requires: z.array(z.strictObject({ path: z.string().min(1), equals: z.union([z.string(), z.boolean()]) })).optional(),
+  conflicts: z.array(z.strictObject({ path: z.string().min(1), equals: z.union([z.string(), z.boolean()]) })).optional(),
 }).refine(choice => choice.available || choice.reason !== undefined, {
   message: 'Unavailable choices need a reason',
   path: ['reason'],

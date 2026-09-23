@@ -12,6 +12,7 @@ model Company {
   name  String
   items ExampleItem[]
   memberships CompanyMembership[]
+  /*__AUDIT_COMPANY_RELATION__*/
 }
 
 model ExampleItem {

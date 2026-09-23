@@ -4,8 +4,9 @@ import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { HealthController } from './health.controller';
 /*__AUTH_IMPORT__*/
+/*__FEATURE_IMPORTS__*/
 
-@Module({ imports: [/*__AUTH_MODULE__*/], controllers: [HealthController] })
+@Module({ imports: [/*__AUTH_MODULE__*//*__FEATURE_MODULES__*/], controllers: [HealthController] })
 class AppModule {}
 
 async function bootstrap() {

@@ -40,19 +40,22 @@ describe('generation API', () => {
     const enterprise = {
       ...config,
       project: { ...config.project, profile: 'enterprise' },
-      features: { ...config.features, auth: true },
+      features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
     };
     const result = await request(app.getHttpServer()).post('/generator/validate').send(enterprise).expect(201);
-    expect(result.body.capabilities).toEqual(['auth', 'company-scope']);
+    expect(result.body.capabilities).toEqual(['auth', 'company-scope', 'rbac', 'dynamic-navigation', 'audit']);
     expect(result.body.files).toContain('apps/api/src/auth/auth.controller.ts');
     expect(result.body.files).toContain('apps/api/src/company/company.service.ts');
+    expect(result.body.files).toContain('apps/api/src/rbac/permission.guard.ts');
+    expect(result.body.files).toContain('apps/api/src/navigation/navigation.controller.ts');
+    expect(result.body.files).toContain('apps/api/src/audit/audit.interceptor.ts');
   });
 
   it('reports field issues and a correlation ID for unsupported choices', async () => {
     const result = await request(app.getHttpServer()).post('/generator/validate').send({ ...config, features: { ...config.features, audit: true } }).expect(400);
     expect(result.body.code).toBe('INVALID_CONFIGURATION');
     expect(result.body.correlationId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(result.body.issues).toEqual(expect.arrayContaining([expect.objectContaining({ path: 'features.audit' })]));
+    expect(result.body.issues).toEqual(expect.arrayContaining([expect.objectContaining({ path: 'features.auth', code: 'FEATURE_DEPENDENCY' })]));
   });
 
   it('returns a ZIP with a safe filename', async () => {
