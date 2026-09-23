@@ -20,6 +20,24 @@ describe('draft storage', () => {
     expect(loadDraft(localStorage)).toEqual(config);
   });
 
+  it('migrates a schema v2 draft and preserves prior choices', () => {
+    const legacy = {
+      ...example,
+      schemaVersion: 2,
+      project: { ...example.project, name: 'old-project' },
+    };
+    localStorage.setItem('project-forge:draft:v2', JSON.stringify(legacy));
+
+    const migrated = loadDraft(localStorage);
+
+    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.project.name).toBe('old-project');
+    expect(migrated.output.destination).toBe('zip');
+    expect(migrated.dataMode).toBe('api-backed');
+    expect(localStorage.getItem('project-forge:draft:v2')).toBeNull();
+    expect(localStorage.getItem(DRAFT_STORAGE_KEY)).toEqual(JSON.stringify(migrated));
+  });
+
   it.each([
     ['malformed JSON', '{'],
     ['old schema', JSON.stringify({ ...example, schemaVersion: 1 })],

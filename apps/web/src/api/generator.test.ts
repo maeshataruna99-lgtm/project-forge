@@ -3,20 +3,23 @@ import type { ProjectConfig } from '@project-forge/contracts';
 import { downloadArchive, fetchCatalog, GeneratorApiError, validateConfig } from './generator';
 
 const config: ProjectConfig = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   project: { name: 'sample-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
   stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
   company: { mode: 'single', superAdminScope: 'company' },
-  features: { auth: false, rbac: false, navigation: 'none', audit: false, redis: false, docker: false },
-  theme: { preset: 'modern-saas', mode: 'light', primary: '#2563EB', accent: '#F59E0B' },
+  features: { auth: false, authStrategy: 'jwt-refresh', rbac: false, navigation: 'none', audit: false, redis: false, docker: false, queue: false, realtime: false, apiDocs: false, smtp: false, uploads: false, generatedTests: false, logging: false, ciCd: false, rateLimit: false },
+  dataMode: 'api-backed', deploymentProfile: 'local', output: { destination: 'zip' },
+  theme: { preset: 'modern-saas', palette: 'blue', mode: 'light', primary: '#2563EB', accent: '#F59E0B', radius: 'medium', shadow: 'subtle', density: 'comfortable' },
 };
 
 const categories = [
   'profiles', 'blueprints', 'shapes', 'layouts', 'languages', 'backends', 'frontends',
   'databases', 'orms', 'packageManagers', 'taskRunners', 'companyModes',
-  'superAdminScopes', 'auth', 'rbac', 'navigation', 'audit', 'redis', 'docker',
-  'themes', 'themeModes',
+  'superAdminScopes', 'auth', 'authStrategies', 'rbac', 'navigation', 'audit', 'redis', 'docker',
+  'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
+  'dataModes', 'deploymentProfiles', 'outputDestinations', 'themes', 'palettes', 'themeModes',
+  'themeRadii', 'themeShadows', 'themeDensities',
 ] as const;
 const catalog = Object.fromEntries(categories.map(key => [key, [{ value: 'minimal', label: 'Minimal', available: true }]]));
 

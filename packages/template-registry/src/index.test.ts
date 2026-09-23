@@ -3,13 +3,23 @@ import { catalogSchema, projectConfigSchema, type ProjectConfig } from '@project
 import { catalog, validateCompatibility } from './index';
 
 const base: ProjectConfig = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   project: { name: 'my-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
   stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
   company: { mode: 'single', superAdminScope: 'company' },
-  features: { auth: false, rbac: false, navigation: 'none', audit: false, redis: false, docker: false },
-  theme: { preset: 'modern-saas', mode: 'light', primary: '#2563EB', accent: '#F59E0B' },
+  features: {
+    auth: false, authStrategy: 'jwt-refresh', rbac: false, navigation: 'none', audit: false,
+    redis: false, docker: false, queue: false, realtime: false, apiDocs: false, smtp: false,
+    uploads: false, generatedTests: false, logging: false, ciCd: false, rateLimit: false,
+  },
+  dataMode: 'api-backed',
+  deploymentProfile: 'local',
+  output: { destination: 'zip' },
+  theme: {
+    preset: 'modern-saas', palette: 'blue', mode: 'light', primary: '#2563EB', accent: '#F59E0B',
+    radius: 'medium', shadow: 'subtle', density: 'comfortable',
+  },
 };
 
 describe('first template registry', () => {
@@ -85,13 +95,24 @@ describe('first template registry', () => {
       ['companyModes', projectConfigSchema.shape.company.shape.mode.options],
       ['superAdminScopes', projectConfigSchema.shape.company.shape.superAdminScope.options],
       ['navigation', projectConfigSchema.shape.features.shape.navigation.options],
+      ['authStrategies', projectConfigSchema.shape.features.shape.authStrategy.options],
       ['themes', projectConfigSchema.shape.theme.shape.preset.options],
+      ['palettes', projectConfigSchema.shape.theme.shape.palette.options],
       ['themeModes', projectConfigSchema.shape.theme.shape.mode.options],
+      ['themeRadii', projectConfigSchema.shape.theme.shape.radius.options],
+      ['themeShadows', projectConfigSchema.shape.theme.shape.shadow.options],
+      ['themeDensities', projectConfigSchema.shape.theme.shape.density.options],
+      ['dataModes', projectConfigSchema.shape.dataMode.options],
+      ['deploymentProfiles', projectConfigSchema.shape.deploymentProfile.options],
+      ['outputDestinations', projectConfigSchema.shape.output.shape.destination.options],
     ] as const;
     for (const [category, options] of fields) {
       expect(catalog[category].map(choice => choice.value).sort(), category).toEqual([...options].sort());
     }
-    for (const category of ['auth', 'rbac', 'audit', 'redis', 'docker'] as const) {
+    for (const category of [
+      'auth', 'rbac', 'audit', 'redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp',
+      'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
+    ] as const) {
       expect(catalog[category].map(choice => choice.value).sort(), category).toEqual(['false', 'true']);
     }
     expect(catalogSchema.safeParse(catalog).success).toBe(true);
@@ -106,14 +127,25 @@ describe('first template registry', () => {
       ['databases', 'stack', 'database'], ['orms', 'stack', 'orm'],
       ['companyModes', 'company', 'mode'], ['superAdminScopes', 'company', 'superAdminScope'],
       ['auth', 'features', 'auth'], ['rbac', 'features', 'rbac'], ['navigation', 'features', 'navigation'],
-      ['audit', 'features', 'audit'], ['redis', 'features', 'redis'], ['docker', 'features', 'docker'],
-      ['themes', 'theme', 'preset'],
-      ['themeModes', 'theme', 'mode'],
+      ['authStrategies', 'features', 'authStrategy'], ['audit', 'features', 'audit'], ['redis', 'features', 'redis'],
+      ['docker', 'features', 'docker'], ['queue', 'features', 'queue'], ['realtime', 'features', 'realtime'],
+      ['apiDocs', 'features', 'apiDocs'], ['smtp', 'features', 'smtp'], ['uploads', 'features', 'uploads'],
+      ['generatedTests', 'features', 'generatedTests'], ['logging', 'features', 'logging'],
+      ['ciCd', 'features', 'ciCd'], ['rateLimit', 'features', 'rateLimit'],
+      ['themes', 'theme', 'preset'], ['palettes', 'theme', 'palette'], ['themeModes', 'theme', 'mode'],
+      ['themeRadii', 'theme', 'radius'], ['themeShadows', 'theme', 'shadow'], ['themeDensities', 'theme', 'density'],
+      ['dataModes', 'root', 'dataMode'], ['deploymentProfiles', 'root', 'deploymentProfile'],
+      ['outputDestinations', 'output', 'destination'],
     ] as const;
     for (const [category, section, field] of fields) {
       for (const choice of catalog[category]) {
-        const value = ['auth', 'rbac', 'audit', 'redis', 'docker'].includes(category) ? choice.value === 'true' : choice.value;
-        const candidate = { ...base, [section]: { ...base[section], [field]: value } } as ProjectConfig;
+        const value = [
+          'auth', 'rbac', 'audit', 'redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp',
+          'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
+        ].includes(category) ? choice.value === 'true' : choice.value;
+        const candidate = section === 'root'
+          ? { ...base, [field]: value }
+          : { ...base, [section]: { ...base[section], [field]: value } };
         expect(validateCompatibility(candidate).length === 0, `${category}.${choice.value}`).toBe(choice.available);
       }
     }

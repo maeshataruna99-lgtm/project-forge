@@ -2,19 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { catalogSchema, projectConfigSchema } from './index';
 
 const validConfig = {
-  schemaVersion: 2,
-  project: { name: 'commerce-app', blueprint: 'ecommerce', shape: 'fullstack', profile: 'minimal' },
-  repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
+  schemaVersion: 3,
+  project: { name: 'commerce-app', blueprint: 'ecommerce', shape: 'fullstack', profile: 'enterprise' },
+  repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'turborepo' },
   stack: {
-    language: 'typescript',
-    backend: 'nestjs',
+    language: 'php',
+    backend: 'laravel',
     frontend: 'vue-vite',
     database: 'postgresql',
-    orm: 'prisma',
+    orm: 'eloquent',
   },
   company: { mode: 'multi', superAdminScope: 'global' },
-  features: { auth: true, rbac: true, navigation: 'dynamic', audit: true, redis: false, docker: true },
-  theme: { preset: 'modern-saas', mode: 'light', primary: '#2563EB', accent: '#F59E0B' },
+  features: {
+    auth: true, authStrategy: 'jwt-refresh', rbac: true, navigation: 'dynamic', audit: true,
+    redis: true, docker: true, queue: true, realtime: true, apiDocs: true, smtp: true,
+    uploads: true, generatedTests: true, logging: true, ciCd: true, rateLimit: true,
+  },
+  dataMode: 'api-backed',
+  deploymentProfile: 'vps',
+  output: { destination: 'github' },
+  theme: {
+    preset: 'pos', palette: 'emerald', mode: 'dark', primary: '#2563EB', accent: '#F59E0B',
+    radius: 'large', shadow: 'subtle', density: 'compact',
+  },
 };
 
 describe('projectConfigSchema', () => {
@@ -43,8 +53,23 @@ describe('projectConfigSchema', () => {
     expect(projectConfigSchema.safeParse({ ...validConfig, project }).success).toBe(false);
   });
 
-  it('rejects the old schema version after adding the required profile', () => {
-    expect(projectConfigSchema.safeParse({ ...validConfig, schemaVersion: 1 }).success).toBe(false);
+  it('rejects old and unknown schema versions', () => {
+    expect(projectConfigSchema.safeParse({ ...validConfig, schemaVersion: 2 }).success).toBe(false);
+    expect(projectConfigSchema.safeParse({ ...validConfig, schemaVersion: 99 }).success).toBe(false);
+  });
+
+  it('rejects a technology choice outside the registered finite option set', () => {
+    expect(projectConfigSchema.safeParse({
+      ...validConfig,
+      stack: { ...validConfig.stack, language: 'rust' },
+    }).success).toBe(false);
+  });
+
+  it('rejects an output destination outside the explicit ZIP and GitHub paths', () => {
+    expect(projectConfigSchema.safeParse({
+      ...validConfig,
+      output: { destination: 's3' },
+    }).success).toBe(false);
   });
 });
 
@@ -55,7 +80,10 @@ describe('catalogSchema', () => {
     const categories = [
       'profiles', 'blueprints', 'shapes', 'layouts', 'languages', 'backends', 'frontends',
       'databases', 'orms', 'packageManagers', 'taskRunners', 'companyModes',
-      'superAdminScopes', 'auth', 'rbac', 'navigation', 'audit', 'redis', 'docker', 'themes', 'themeModes',
+      'superAdminScopes', 'auth', 'authStrategies', 'rbac', 'navigation', 'audit', 'redis', 'docker',
+      'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
+      'dataModes', 'deploymentProfiles', 'outputDestinations', 'themes', 'palettes', 'themeModes',
+      'themeRadii', 'themeShadows', 'themeDensities',
     ];
     const complete = Object.fromEntries(categories.map(key => [key, [{ value: 'sample', label: 'Sample', available: true }]]));
     expect(catalogSchema.safeParse(complete).success).toBe(true);
