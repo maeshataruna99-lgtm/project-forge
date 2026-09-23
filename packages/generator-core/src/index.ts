@@ -3,92 +3,15 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import { strToU8, zipSync } from 'fflate';
-import { projectConfigSchema, type ProjectConfig } from '@project-forge/contracts';
-import { validateCompatibility, type CompatibilityIssue } from '@project-forge/template-registry';
-import { composeFeatureFiles } from './compose';
+import type { ProjectConfig } from '@project-forge/contracts';
+import { assertSafeArchivePath, GenerationError, resolveGeneration } from './plan';
+export { assertSafeArchivePath, ConfigurationError, createPlan, GenerationError } from './plan';
+export type { GenerationPlan } from './plan';
 
 const templateRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../templates/typescript-nest-vue');
 const MAX_ARCHIVE_BYTES = 2_000_000;
 const MAX_SOURCE_BYTES = 2_000_000;
 const MAX_GENERATION_MS = 5_000;
-
-const manifest = [
-  '.env.example', '.gitignore', 'README.md', 'package.json', 'pnpm-workspace.yaml',
-  'packages/config/package.json', 'packages/config/tsconfig.base.json',
-  'packages/contracts/package.json', 'packages/contracts/src/index.ts',
-  'apps/api/package.json', 'apps/api/tsconfig.json', 'apps/api/src/main.ts',
-  'apps/api/src/health.controller.ts', 'apps/api/src/health.controller.test.ts',
-  'apps/web/package.json', 'apps/web/index.html', 'apps/web/tsconfig.json',
-  'apps/web/vite.config.ts', 'apps/web/src/main.ts', 'apps/web/src/App.vue',
-  'apps/web/src/style.css', 'prisma/schema.prisma',
-] as const;
-
-export type GenerationPlan = {
-  projectName: string;
-  profile: 'minimal' | 'enterprise';
-  capabilities: string[];
-  files: string[];
-  theme: { mode: 'light' | 'dark'; primary: string; accent: string };
-};
-
-export class ConfigurationError extends Error {
-  constructor(public readonly issues: CompatibilityIssue[]) {
-    super('Invalid or unsupported project configuration');
-    this.name = 'ConfigurationError';
-  }
-}
-
-export class GenerationError extends Error {
-  constructor() {
-    super('Project generation failed');
-    this.name = 'GenerationError';
-  }
-}
-
-export function assertSafeArchivePath(path: string): void {
-  if (!path || isAbsolute(path) || path.startsWith('/') || path.includes('\\') || path.includes(':')) throw new GenerationError();
-  const segments = path.split('/');
-  if (segments.some(segment => !segment || segment === '.' || segment === '..' || segment === '.env' || (segment.startsWith('.env.') && segment !== '.env.example'))) {
-    throw new GenerationError();
-  }
-}
-
-function validate(input: unknown): ProjectConfig {
-  const parsed = projectConfigSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new ConfigurationError(parsed.error.issues.map(issue => ({
-      path: issue.path.join('.'), code: 'INVALID_INPUT', message: issue.message,
-    })));
-  }
-  const issues = validateCompatibility(parsed.data);
-  if (issues.length) throw new ConfigurationError(issues);
-  return parsed.data;
-}
-
-export function createPlan(input: unknown): GenerationPlan {
-  const config = validate(input);
-  const featureFiles = composeFeatureFiles(config);
-  const registeredFiles = [...manifest, ...featureFiles.map(file => file.destination)];
-  const seen = new Set<string>();
-  for (const path of registeredFiles) {
-    assertSafeArchivePath(path);
-    const key = path.toLowerCase();
-    if (seen.has(key)) throw new GenerationError();
-    seen.add(key);
-  }
-  return {
-    projectName: config.project.name,
-    profile: config.project.profile,
-    capabilities: [
-      ...(config.features.auth || config.project.profile === 'enterprise' ? ['auth', 'company-scope'] : []),
-      ...(config.features.rbac ? ['rbac'] : []),
-      ...(config.features.navigation === 'dynamic' ? ['dynamic-navigation'] : []),
-      ...(config.features.audit ? ['audit'] : []),
-    ],
-    files: registeredFiles,
-    theme: { mode: config.theme.mode, primary: config.theme.primary, accent: config.theme.accent },
-  };
-}
 
 function readTemplate(path: string): string {
   try {
@@ -234,9 +157,7 @@ This profile includes company registration, salted scrypt password hashing, 15-m
 }
 
 function prepareFiles(input: unknown): Record<string, Uint8Array> {
-  const config = validate(input);
-  const plan = createPlan(config);
-  const featureFiles = composeFeatureFiles(config);
+  const { config, plan, featureFiles } = resolveGeneration(input);
   const sources = new Map(featureFiles.map(file => [file.destination, file.source]));
   const files: Record<string, Uint8Array> = {};
   let totalBytes = 0;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
-import { assertSafeArchivePath, ConfigurationError, createArchive, createPlan } from './index';
+import { assertSafeArchivePath, ConfigurationError, createArchive, createArchiveAsync, createPlan } from './index';
 import { hashPassword, verifyPassword, signToken, verifyToken } from '../../../templates/typescript-nest-vue/fragments/auth/auth.service';
 import { resolveCompanyWhere, scopeQuery } from '../../../templates/typescript-nest-vue/fragments/company/scope';
 
@@ -46,6 +46,7 @@ describe('generator core', () => {
   it('includes the authentication foundation in Enterprise even when the optional Minimal switch is off', () => {
     const plan = createPlan({ ...config, project: { ...config.project, profile: 'enterprise' } });
     expect(plan.capabilities).toContain('auth');
+    expect(plan.features.auth).toBe(true);
     expect(plan.files).toContain('apps/api/src/auth/auth.module.ts');
   });
 
@@ -163,5 +164,14 @@ describe('generator core', () => {
     const second = unzipSync(createArchive(config));
     expect(Object.keys(first)).toEqual(Object.keys(second));
     for (const path of Object.keys(first)) expect(first[path]).toEqual(second[path]);
+  });
+
+  it('returns a sorted plan and byte-identical archives for sync and worker-backed generation', async () => {
+    const plan = createPlan(config);
+    expect(plan.files).toEqual([...plan.files].sort());
+    expect(plan).toMatchObject({ templatePack: 'typescript-nest-vue', shape: 'fullstack', layout: 'monorepo', dataMode: 'api-backed', deploymentProfile: 'local', outputDestination: 'zip' });
+    const sync = createArchive(config);
+    expect(createArchive(config)).toEqual(sync);
+    expect(await createArchiveAsync(config)).toEqual(sync);
   });
 });
