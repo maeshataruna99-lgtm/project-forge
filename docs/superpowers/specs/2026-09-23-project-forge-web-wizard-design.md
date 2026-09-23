@@ -62,7 +62,7 @@ Excluded: implementing new starter templates or enabling currently unsupported e
 9. The UI is usable with keyboard navigation and adapts to narrow screens.
 10. Workspace lint/typecheck/test commands cover the web app, and a documented local development path starts web and API together.
 
-## Decisions to confirm in review
+## Confirmed decisions
 
 - The wizard begins with the existing minimal configuration and presents unsupported catalog choices as disabled options.
 - Drafts are stored only in local storage.

@@ -65,27 +65,27 @@
 - Each catalog choice is `{ value: string; label: string; available: boolean; reason?: string }`; boolean features use explicit `enabledByDefault` semantics only if needed by the API design, otherwise UI derives values from config defaults.
 - `catalog` in template registry conforms to `GeneratorCatalog`; API returns this typed value unchanged.
 
-- [ ] **Step 1: Add failing contract and catalog tests**
+- [x] **Step 1: Add failing contract and catalog tests**
 
 Test that the complete catalog parses through `catalogSchema`, every selectable field has an entry for each schema enum/boolean state, and `available` choices match the minimal configuration supported by `validateCompatibility`.
 
-- [ ] **Step 2: Run focused tests and confirm failure**
+- [x] **Step 2: Run focused tests and confirm failure**
 
 Run: `pnpm --filter @project-forge/contracts test && pnpm --filter @project-forge/template-registry test && pnpm --filter @project-forge/api test`
 
 Expected: FAIL because the shared catalog schema/categories and registry entries do not exist yet.
 
-- [ ] **Step 3: Add the shared catalog schema and registry choices**
+- [x] **Step 3: Add the shared catalog schema and registry choices**
 
 Define reusable Zod choice and category schemas in contracts. Add choices for each schema enum and boolean feature to the registry. Mark the current minimal configuration available and all unsupported stack/company/feature choices unavailable with concrete reasons. Do not change `validateCompatibility` to accept any newly listed option.
 
-- [ ] **Step 4: Verify catalog types and API response**
+- [x] **Step 4: Verify catalog types and API response**
 
 Run the three focused package tests and `pnpm --filter @project-forge/contracts typecheck && pnpm --filter @project-forge/template-registry typecheck && pnpm --filter @project-forge/api typecheck`.
 
 Expected: PASS; API catalog response includes every setting the wizard renders.
 
-- [ ] **Step 5: Commit the catalog slice**
+- [x] **Step 5: Commit the catalog slice**
 
 ```bash
 git add packages/contracts packages/template-registry apps/api/src/app.test.ts
@@ -114,27 +114,27 @@ git commit -m "feat: expose complete generator catalog"
 - Produces: `fetchCatalog(): Promise<GeneratorCatalog>`, `validateConfig(config: ProjectConfig): Promise<GenerationPlan>` where `GenerationPlan` is inferred from the validate API response (`projectName`, `profile`, `files`, and `theme`), and `downloadArchive(config: ProjectConfig): Promise<{ blob: Blob; filename: string }>`.
 - API failures expose `{ status?: number; code?: string; issues?: Array<{ path: string; message: string }>; correlationId?: string }` through a typed `GeneratorApiError`.
 
-- [ ] **Step 1: Add failing API client tests**
+- [x] **Step 1: Add failing API client tests**
 
 Mock `fetch` to verify catalog parsing, JSON request bodies for validate/archive, readable non-2xx errors, extraction of `Content-Disposition` filenames, and fallback to `<project.name>.zip` when the header is absent or unsafe.
 
-- [ ] **Step 2: Run the focused web test and confirm failure**
+- [x] **Step 2: Run the focused web test and confirm failure**
 
 Run: `pnpm --filter @project-forge/web test`
 
 Expected: FAIL because `apps/web` and its API client are not present.
 
-- [ ] **Step 3: Scaffold the app and implement the API client**
+- [x] **Step 3: Scaffold the app and implement the API client**
 
 Create the Vue/Vite/Tailwind setup, add workspace dependency on `@project-forge/contracts`, and configure Vite to proxy `/generator` and `/health` to `http://localhost:3000`. Implement the three client operations, parse response payloads with shared schemas, and sanitize download filenames to a basename ending in `.zip`.
 
-- [ ] **Step 4: Verify app tooling and HTTP behavior**
+- [x] **Step 4: Verify app tooling and HTTP behavior**
 
 Run: `pnpm install --offline; pnpm --filter @project-forge/web test; pnpm --filter @project-forge/web typecheck; pnpm --filter @project-forge/web build`
 
 Expected: PASS with the scaffold app rendering and API client tests passing. If a required package is not cached, use the configured package manager install with network approval workflow rather than silently substituting an unrelated library.
 
-- [ ] **Step 5: Commit the app foundation**
+- [x] **Step 5: Commit the app foundation**
 
 ```bash
 git add apps/web package.json pnpm-lock.yaml
@@ -158,27 +158,27 @@ git commit -m "feat: scaffold project forge web app"
 - Consumes: `GeneratorCatalog`, `ProjectConfig`, and app callbacks for `next`, `back`, and config updates.
 - Produces: five-step navigation with typed updates to config; choice controls show unavailable reasons and cannot select unavailable values.
 
-- [ ] **Step 1: Add failing navigation and accessibility tests**
+- [x] **Step 1: Add failing navigation and accessibility tests**
 
 Test the five visible steps, next/back behavior, project-name input and constraints, disabled catalog options with reasons, and keyboard operation of step navigation and choices.
 
-- [ ] **Step 2: Run the focused UI tests and confirm failure**
+- [x] **Step 2: Run the focused UI tests and confirm failure**
 
 Run: `pnpm --filter @project-forge/web test`
 
 Expected: FAIL because the stepper and form components are missing.
 
-- [ ] **Step 3: Implement the stepper and form components**
+- [x] **Step 3: Implement the stepper and form components**
 
 Create semantic `nav`/`ol` step navigation, labeled inputs/selects, disabled choices with adjacent explanation text, validation messages associated by `aria-describedby`, and Back/Continue controls. Keep project, stack, organization/features, and theme forms focused in their own step components.
 
-- [ ] **Step 4: Verify keyboard and responsive behavior**
+- [x] **Step 4: Verify keyboard and responsive behavior**
 
 Run: `pnpm --filter @project-forge/web test; pnpm --filter @project-forge/web typecheck; pnpm --filter @project-forge/web build`
 
 Expected: PASS. Keyboard focus remains visible and all required labels and disabled reasons are exposed in rendered DOM.
 
-- [ ] **Step 5: Commit the wizard navigation slice**
+- [x] **Step 5: Commit the wizard navigation slice**
 
 ```bash
 git add apps/web/src
@@ -200,27 +200,27 @@ git commit -m "feat: add project configuration wizard steps"
 - Produces: `createDefaultConfig(projectName?: string): ProjectConfig`, `loadDraft(storage: Storage): ProjectConfig`, `saveDraft(storage: Storage, config: ProjectConfig): void`, and `clearDraft(storage: Storage): void`.
 - Produces wizard state that persists config updates, tracks the active step, and resets to a valid default.
 
-- [ ] **Step 1: Add failing domain tests**
+- [x] **Step 1: Add failing domain tests**
 
 Verify defaults equal the valid minimal example, storage round-trips valid config, malformed JSON and schemaVersion 1 data fall back to defaults, structurally invalid data is rejected, and reset clears storage and restores defaults.
 
-- [ ] **Step 2: Run focused domain tests and confirm failure**
+- [x] **Step 2: Run focused domain tests and confirm failure**
 
 Run: `pnpm --filter @project-forge/web test`
 
 Expected: FAIL because the config and draft state modules do not exist.
 
-- [ ] **Step 3: Implement safe persistence and wizard state**
+- [x] **Step 3: Implement safe persistence and wizard state**
 
 Parse restored data through `projectConfigSchema`; catch storage access and JSON parse failures; never write an invalid config; default to `minimal-config.json` values encoded in the typed factory. Wire config changes to save immediately. Add a reset button that asks for confirmation before discarding a saved draft.
 
-- [ ] **Step 4: Verify persistence and reset interactions**
+- [x] **Step 4: Verify persistence and reset interactions**
 
 Run: `pnpm --filter @project-forge/web test; pnpm --filter @project-forge/web typecheck`
 
 Expected: PASS; invalid persisted data cannot crash app startup, and reset restores the supported default.
 
-- [ ] **Step 5: Commit draft persistence**
+- [x] **Step 5: Commit draft persistence**
 
 ```bash
 git add apps/web/src
@@ -243,27 +243,27 @@ git commit -m "feat: persist project wizard drafts"
 - Consumes: `validateConfig(config)` and `downloadArchive(config)` from Task 2; `GenerationPlan` defined by the typed validate API response in Task 2.
 - Produces: review state with `{ plan?: GenerationPlan; validationError?: GeneratorApiError; archiveState: 'idle' | 'downloading' | 'error' | 'complete' }`.
 
-- [ ] **Step 1: Add failing tests for review and download**
+- [x] **Step 1: Add failing tests for review and download**
 
 Test theme preview updates for color/mode changes; validation success renders plan file paths; validation failure presents field messages and correlation ID while retaining values; archive cannot start before validation; successful download uses safe filename; missing/unsafe filename falls back to `<project.name>.zip`; archive failure returns to retryable state without clearing config.
 
-- [ ] **Step 2: Run focused review tests and confirm failure**
+- [x] **Step 2: Run focused review tests and confirm failure**
 
 Run: `pnpm --filter @project-forge/web test`
 
 Expected: FAIL because review, file tree, and theme preview components are missing.
 
-- [ ] **Step 3: Implement review and generation flow**
+- [x] **Step 3: Implement review and generation flow**
 
 Render a live preview driven by CSS variables for primary/accent and light/dark mode. On entering Review, call validate and display the returned plan. Disable archive generation unless validation succeeded for the current config; invalidate the prior plan when config changes. Trigger browser download from the archive blob and revoke its object URL after use. Keep controls retryable after errors and surface API correlation IDs.
 
-- [ ] **Step 4: Document local and production routing; verify the flow**
+- [x] **Step 4: Document local and production routing; verify the flow**
 
 Document `pnpm install`, `pnpm --filter @project-forge/api dev`, and `pnpm --filter @project-forge/web dev`, plus the same-origin production proxy. Run: `pnpm --filter @project-forge/web test; pnpm --filter @project-forge/web typecheck; pnpm --filter @project-forge/web build; pnpm --filter @project-forge/api test`.
 
 Expected: PASS; mock/API integration tests cover catalog through ZIP response and user-visible recovery states.
 
-- [ ] **Step 5: Commit review and generation flow**
+- [x] **Step 5: Commit review and generation flow**
 
 ```bash
 git add apps/web package.json
@@ -281,21 +281,21 @@ git commit -m "feat: validate and download generated projects"
 - Consumes: all prior tasks.
 - Produces: root documentation describing how to start the API and web app and the supported first-slice choices.
 
-- [ ] **Step 1: Run complete workspace verification**
+- [x] **Step 1: Run complete workspace verification**
 
 Run: `pnpm test; pnpm typecheck; pnpm --filter @project-forge/web build; pnpm smoke:extract`
 
 Expected: PASS; generator core remains compatible and existing starter archive smoke extraction still succeeds.
 
-- [ ] **Step 2: Run the application locally and verify the main journey**
+- [x] **Step 2: Run the application locally and verify the main journey**
 
 Start API and web dev servers in separate terminals. Open the web app, confirm the catalog loads, set a valid project name, proceed through all steps, confirm the file tree, generate the ZIP, and inspect that the downloaded archive opens. Also confirm unsupported selections stay disabled and an API validation error leaves the draft intact.
 
-- [ ] **Step 3: Update root README and CI if needed**
+- [x] **Step 3: Update root README and CI if needed**
 
 Add web app startup commands, local API proxy behavior, production same-origin routing expectation, and the current supported minimal configuration. Ensure CI invokes the new web package test/typecheck/build scripts when its current workflow does not cover root scripts.
 
-- [ ] **Step 4: Re-run final verification and commit documentation**
+- [x] **Step 4: Re-run final verification and commit documentation**
 
 Run: `pnpm test; pnpm typecheck; pnpm --filter @project-forge/web build; pnpm smoke:extract`
 

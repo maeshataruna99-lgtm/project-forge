@@ -28,7 +28,7 @@ pnpm --filter @project-forge/web dev
 
 Open the URL printed by Vite. The web development server proxies `/generator` and `/health` to the API on port 3000. For production, serve the built web app and API under one origin: route `/generator/*` and `/health` to the API, and serve web assets for other paths. The browser calls relative API URLs.
 
-The current supported configuration is the [minimal example](examples/minimal-config.json): Blank Fullstack, fullstack monorepo, TypeScript, NestJS, Vue 3/Vite, PostgreSQL, Prisma, pnpm, single company, and minimal profile with enterprise features disabled. The wizard shows other choices as unavailable with their reasons. The API serves `GET /health`, `GET /generator/catalog`, `POST /generator/validate`, and `POST /generator/archive` on port 3000. Send the example configuration as JSON to either POST endpoint; archive returns `sample-app.zip`.
+The current supported configuration is the [minimal example](examples/minimal-config.json): Blank Fullstack, fullstack monorepo, TypeScript, NestJS, Vue 3/Vite, PostgreSQL, Prisma, pnpm, single company, and minimal profile with enterprise features disabled. The wizard disables unsupported catalog choices and explains why; supported theme modes and colors remain editable. The API serves `GET /health`, `GET /generator/catalog`, `POST /generator/validate`, and `POST /generator/archive` on port 3000. Send the example configuration as JSON to either POST endpoint; archive returns `sample-app.zip`.
 
 To unpack a sample archive into a temporary directory for verification, run `pnpm smoke:extract` and use the printed path. The generated README lists its own setup, build, test, and migration commands.
 
