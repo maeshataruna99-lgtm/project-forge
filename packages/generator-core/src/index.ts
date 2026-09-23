@@ -12,6 +12,7 @@ const templateRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../
 const MAX_ARCHIVE_BYTES = 2_000_000;
 const MAX_SOURCE_BYTES = 2_000_000;
 const MAX_GENERATION_MS = 5_000;
+const ARCHIVE_MTIME = new Date('1980-01-01T00:00:00.000Z');
 
 function readTemplate(path: string): string {
   try {
@@ -157,8 +158,8 @@ This profile includes company registration, salted scrypt password hashing, 15-m
 }
 
 function prepareFiles(input: unknown): Record<string, Uint8Array> {
-  const { config, plan, featureFiles } = resolveGeneration(input);
-  const sources = new Map(featureFiles.map(file => [file.destination, file.source]));
+  const { config, plan, baseFiles, featureFiles } = resolveGeneration(input);
+  const sources = new Map([...baseFiles, ...featureFiles].map(file => [file.destination, file.source]));
   const files: Record<string, Uint8Array> = {};
   let totalBytes = 0;
   for (const path of plan.files) {
@@ -174,7 +175,7 @@ function prepareFiles(input: unknown): Record<string, Uint8Array> {
 }
 
 export function createArchive(input: unknown): Uint8Array {
-  const archive = zipSync(prepareFiles(input), { level: 6 });
+  const archive = zipSync(prepareFiles(input), { level: 6, mtime: ARCHIVE_MTIME });
   if (archive.length > MAX_ARCHIVE_BYTES) throw new GenerationError();
   return archive;
 }

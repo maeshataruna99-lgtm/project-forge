@@ -13,6 +13,82 @@ const baseManifest = [
   'apps/web/vite.config.ts', 'apps/web/src/main.ts', 'apps/web/src/App.vue',
   'apps/web/src/style.css', 'prisma/schema.prisma',
 ] as const;
+const apiManifest = [
+  '.env.example', '.gitignore', 'README.md', 'package.json', 'pnpm-workspace.yaml',
+  'packages/config/package.json', 'packages/config/tsconfig.base.json',
+  'packages/contracts/package.json', 'packages/contracts/src/index.ts',
+  'apps/api/package.json', 'apps/api/tsconfig.json', 'apps/api/src/main.ts',
+  'apps/api/src/health.controller.ts', 'apps/api/src/health.controller.test.ts',
+] as const;
+const apiNoDatabaseManifest = apiManifest.filter(path => !path.startsWith('packages/contracts/'));
+const frontendManifest = [
+  '.gitignore', 'README.md', 'package.json', 'pnpm-workspace.yaml',
+  'packages/config/package.json', 'packages/config/tsconfig.base.json',
+  'apps/web/package.json', 'apps/web/index.html', 'apps/web/tsconfig.json',
+  'apps/web/vite.config.ts', 'apps/web/src/main.ts', 'apps/web/src/App.vue', 'apps/web/src/style.css',
+] as const;
+const singleApiManifest = [
+  '.env.example', '.gitignore', 'README.md', 'package.json', 'tsconfig.base.json',
+  'apps/api/tsconfig.json', 'apps/api/src/main.ts', 'apps/api/src/health.controller.ts',
+  'apps/api/src/health.controller.test.ts',
+] as const;
+const singleFrontendManifest = [
+  '.gitignore', 'README.md', 'package.json', 'tsconfig.base.json',
+  'apps/web/index.html', 'apps/web/tsconfig.json', 'apps/web/vite.config.ts',
+  'apps/web/src/main.ts', 'apps/web/src/App.vue', 'apps/web/src/style.css',
+] as const;
+
+function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
+  const sources = new Map<string, string>();
+  let manifest: readonly string[];
+  if (config.repository.layout === 'single-app') {
+    if (config.project.shape === 'api-only') {
+      manifest = singleApiManifest;
+      sources.set('package.json', 'layouts/single-app/api-package.json');
+      sources.set('tsconfig.base.json', 'layouts/single-app/tsconfig.base.json');
+      sources.set('apps/api/tsconfig.json', 'layouts/single-app/api-tsconfig.json');
+      sources.set('apps/api/src/health.controller.ts', 'layouts/single-app/api-health.controller.ts');
+      if (config.stack.database !== 'postgresql') {
+        manifest = singleApiManifest.filter(path => path !== '.env.example');
+        sources.set('package.json', 'layouts/single-app/api-no-db-package.json');
+      }
+      sources.set('README.md', 'shapes/api-only/README.md');
+      if (config.stack.database !== 'postgresql') sources.set('README.md', 'shapes/api-only/README-no-db.md');
+      if (config.stack.database === 'postgresql') manifest = [...singleApiManifest, 'prisma/schema.prisma'];
+    } else {
+      manifest = singleFrontendManifest;
+      sources.set('package.json', 'layouts/single-app/frontend-package.json');
+      sources.set('tsconfig.base.json', 'layouts/single-app/tsconfig.base.json');
+      sources.set('apps/web/tsconfig.json', 'layouts/single-app/web-tsconfig.json');
+      sources.set('apps/web/vite.config.ts', 'shapes/frontend-only/apps/web/vite.config.ts');
+      sources.set('apps/web/src/App.vue', 'shapes/frontend-only/apps/web/src/App.vue');
+      sources.set('README.md', 'shapes/frontend-only/README.md');
+    }
+  } else if (config.project.shape === 'api-only') {
+    manifest = config.stack.database === 'postgresql' ? apiManifest : apiNoDatabaseManifest;
+    if (config.stack.database === 'postgresql') manifest = [...apiManifest, 'prisma/schema.prisma'];
+    else {
+      manifest = apiNoDatabaseManifest.filter(path => path !== '.env.example');
+      sources.set('apps/api/package.json', 'shapes/api-only/api-package-no-db.json');
+      sources.set('apps/api/src/health.controller.ts', 'layouts/single-app/api-health.controller.ts');
+    }
+    sources.set('package.json', config.stack.database === 'postgresql' ? 'shapes/api-only/package.json' : 'shapes/api-only/package-no-db.json');
+    sources.set('pnpm-workspace.yaml', 'shapes/api-only/pnpm-workspace.yaml');
+    sources.set('README.md', 'shapes/api-only/README.md');
+    if (config.stack.database !== 'postgresql') sources.set('README.md', 'shapes/api-only/README-no-db.md');
+  } else if (config.project.shape === 'frontend-only') {
+    manifest = frontendManifest;
+    sources.set('package.json', 'shapes/frontend-only/package.json');
+    sources.set('pnpm-workspace.yaml', 'shapes/frontend-only/pnpm-workspace.yaml');
+    sources.set('apps/web/package.json', 'shapes/frontend-only/apps/web/package.json');
+    sources.set('apps/web/vite.config.ts', 'shapes/frontend-only/apps/web/vite.config.ts');
+    sources.set('apps/web/src/App.vue', 'shapes/frontend-only/apps/web/src/App.vue');
+    sources.set('README.md', 'shapes/frontend-only/README.md');
+  } else {
+    manifest = baseManifest;
+  }
+  return manifest.map(destination => ({ source: sources.get(destination) ?? destination, destination }));
+}
 
 export type GenerationPlan = {
   templatePack: 'typescript-nest-vue';
@@ -66,10 +142,11 @@ function parseConfig(input: unknown): ProjectConfig {
   return parsed.data;
 }
 
-export function resolveGeneration(input: unknown): { config: ProjectConfig; plan: GenerationPlan; featureFiles: RegisteredFile[] } {
+export function resolveGeneration(input: unknown): { config: ProjectConfig; plan: GenerationPlan; baseFiles: RegisteredFile[]; featureFiles: RegisteredFile[] } {
   const config = parseConfig(input);
+  const baseFiles = baseFilesFor(config);
   const featureFiles = composeFeatureFiles(config);
-  const files = [...baseManifest, ...featureFiles.map(file => file.destination)].sort();
+  const files = [...baseFiles.map(file => file.destination), ...featureFiles.map(file => file.destination)].sort();
   const seen = new Set<string>();
   for (const path of files) {
     assertSafeArchivePath(path);
@@ -86,6 +163,7 @@ export function resolveGeneration(input: unknown): { config: ProjectConfig; plan
   ];
   return {
     config,
+    baseFiles,
     featureFiles,
     plan: {
       templatePack: 'typescript-nest-vue',

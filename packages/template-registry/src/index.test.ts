@@ -33,15 +33,19 @@ describe('first template registry', () => {
     expect(issues[0]?.message.length).toBeGreaterThan(10);
   });
 
-  it('rejects an unsupported output shape', () => {
-    expect(validateCompatibility({ ...base, project: { ...base.project, shape: 'api-only' } })).toContainEqual(
-      expect.objectContaining({ path: 'project.shape', code: 'TEMPLATE_UNAVAILABLE' }),
+  it('rejects server-only authorization on the frontend-only shape', () => {
+    expect(validateCompatibility({
+      ...base,
+      project: { ...base.project, shape: 'frontend-only' },
+      features: { ...base.features, auth: true },
+    })).toContainEqual(
+      expect.objectContaining({ path: 'project.shape', code: 'FEATURE_DEPENDENCY' }),
     );
   });
 
-  it('rejects an unsupported repository layout', () => {
+  it('rejects single-app fullstack because it requires a monorepo output', () => {
     expect(validateCompatibility({ ...base, repository: { ...base.repository, layout: 'single-app' } })).toContainEqual(
-      expect.objectContaining({ path: 'repository.layout', code: 'TEMPLATE_UNAVAILABLE' }),
+      expect.objectContaining({ path: 'repository.layout', code: 'FEATURE_DEPENDENCY' }),
     );
   });
 
@@ -92,7 +96,37 @@ describe('first template registry', () => {
       features: { ...base.features, auth: true, rbac: true, navigation: 'dynamic' as const, audit: true },
     };
     expect(validateCompatibility(candidate)).toContainEqual(
-      expect.objectContaining({ path: 'project.shape', code: 'TEMPLATE_UNAVAILABLE' }),
+      expect.objectContaining({ path: 'project.shape', code: 'FEATURE_DEPENDENCY' }),
+    );
+  });
+
+  it('supports explicit API-only and frontend-only demo stacks with single-app outputs', () => {
+    const apiOnly = {
+      ...base,
+      project: { ...base.project, shape: 'api-only' as const },
+      repository: { ...base.repository, layout: 'single-app' as const },
+      stack: { ...base.stack, frontend: 'none' as const },
+    };
+    const frontendOnly = {
+      ...base,
+      project: { ...base.project, shape: 'frontend-only' as const },
+      repository: { ...base.repository, layout: 'single-app' as const },
+      stack: { ...base.stack, backend: 'none' as const, database: 'none' as const, orm: 'none' as const },
+      dataMode: 'demo' as const,
+    };
+    expect(validateCompatibility(apiOnly)).toEqual([]);
+    expect(validateCompatibility(frontendOnly)).toEqual([]);
+  });
+
+  it('requires a persistent database when API authentication is enabled', () => {
+    const apiWithoutDatabase = {
+      ...base,
+      project: { ...base.project, shape: 'api-only' as const },
+      stack: { ...base.stack, frontend: 'none' as const, database: 'none' as const, orm: 'none' as const },
+      features: { ...base.features, auth: true },
+    };
+    expect(validateCompatibility(apiWithoutDatabase)).toContainEqual(
+      expect.objectContaining({ path: 'stack.database', code: 'FEATURE_DEPENDENCY' }),
     );
   });
 
@@ -179,9 +213,9 @@ describe('first template registry', () => {
           'auth', 'rbac', 'audit', 'redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp',
           'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
         ].includes(category) ? choice.value === 'true' : choice.value;
-        const candidate = (section === 'root'
-          ? { ...base, [field]: value }
-          : { ...base, [section]: { ...base[section], [field]: value } }) as ProjectConfig;
+        const candidate = structuredClone(base) as ProjectConfig;
+        if (section === 'root') (candidate as unknown as Record<string, unknown>)[field] = value;
+        else (candidate[section] as unknown as Record<string, unknown>)[field] = value;
         for (const requirement of choice.requires ?? []) {
           const parts = requirement.path.split('.');
           let target: Record<string, unknown> = candidate;
@@ -190,6 +224,18 @@ describe('first template registry', () => {
             target = target[part] as Record<string, unknown>;
           }
           target[parts.at(-1)!] = requirement.equals;
+        }
+        for (const conflict of choice.conflicts ?? []) {
+          const parts = conflict.path.split('.');
+          let target: Record<string, unknown> = candidate;
+          for (const part of parts.slice(0, -1)) {
+            if (!target[part] || typeof target[part] !== 'object') target[part] = {};
+            target = target[part] as Record<string, unknown>;
+          }
+          target[parts.at(-1)!] = conflict.equals === 'fullstack' ? 'api-only' : 'fullstack';
+        }
+        if (category === 'layouts' && choice.value === 'single-app') {
+          candidate.stack.frontend = 'none';
         }
         expect(validateCompatibility(candidate).length === 0, `${category}.${choice.value}`).toBe(choice.available);
       }

@@ -28,6 +28,50 @@ const configs = [
       features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
     },
   },
+  {
+    name: 'api-only',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      stack: { ...config.stack, frontend: 'none' },
+    },
+  },
+  {
+    name: 'api-only-no-database',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      stack: { ...config.stack, frontend: 'none', database: 'none', orm: 'none' },
+    },
+  },
+  {
+    name: 'frontend-only',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'frontend-only' },
+      stack: { ...config.stack, backend: 'none', database: 'none', orm: 'none' },
+      dataMode: 'demo',
+    },
+  },
+  {
+    name: 'api-single-app',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      repository: { ...config.repository, layout: 'single-app' },
+      stack: { ...config.stack, frontend: 'none' },
+    },
+  },
+  {
+    name: 'frontend-single-app',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'frontend-only' },
+      repository: { ...config.repository, layout: 'single-app' },
+      stack: { ...config.stack, backend: 'none', database: 'none', orm: 'none' },
+      dataMode: 'demo',
+    },
+  },
 ];
 for (const selected of configs) {
   const files = unzipSync(createArchive(selected.value));

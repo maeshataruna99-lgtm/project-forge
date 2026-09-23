@@ -1,0 +1,7 @@
+{
+  "name": "__PROJECT_NAME__",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.9",
+  "scripts": { "dev": "pnpm --filter @__PROJECT_NAME__/web dev", "build": "pnpm --filter @__PROJECT_NAME__/web build" }
+}

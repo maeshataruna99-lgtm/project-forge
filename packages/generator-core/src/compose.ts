@@ -43,7 +43,9 @@ const auditFiles: RegisteredFile[] = [
 
 export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
   const files: RegisteredFile[] = [];
-  if (config.features.auth || config.project.profile === 'enterprise') files.push(...authFiles);
+  if ((config.features.auth || config.project.profile === 'enterprise') && config.project.shape !== 'frontend-only') {
+    files.push(...authFiles.filter(file => config.project.shape !== 'api-only' || !file.destination.startsWith('apps/web/')));
+  }
   if (config.features.rbac) files.push(...rbacFiles);
   if (config.features.navigation === 'dynamic') files.push(...navigationFiles);
   if (config.features.audit) files.push(...auditFiles);

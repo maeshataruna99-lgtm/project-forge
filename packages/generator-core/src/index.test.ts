@@ -174,4 +174,44 @@ describe('generator core', () => {
     expect(createArchive(config)).toEqual(sync);
     expect(await createArchiveAsync(config)).toEqual(sync);
   });
+
+  it('emits isolated API-only and frontend-only single-app manifests', () => {
+    const apiOnly = {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      repository: { ...config.repository, layout: 'single-app' },
+      stack: { ...config.stack, frontend: 'none' },
+    };
+    const frontendOnly = {
+      ...config,
+      project: { ...config.project, shape: 'frontend-only' },
+      repository: { ...config.repository, layout: 'single-app' },
+      stack: { ...config.stack, backend: 'none', database: 'none', orm: 'none' },
+      dataMode: 'demo',
+    };
+    const apiFiles = unzipSync(createArchive(apiOnly));
+    const frontendFiles = unzipSync(createArchive(frontendOnly));
+    expect(Object.keys(apiFiles)).toContain('sample-app/apps/api/src/main.ts');
+    expect(Object.keys(apiFiles).some(path => path.includes('/apps/web/'))).toBe(false);
+    expect(Object.keys(apiFiles)).not.toContain('sample-app/pnpm-workspace.yaml');
+    expect(JSON.parse(strFromU8(apiFiles['sample-app/package.json']!)).scripts.dev).toContain('apps/api/src/main.ts');
+    expect(Object.keys(frontendFiles)).toContain('sample-app/apps/web/src/App.vue');
+    expect(Object.keys(frontendFiles).some(path => path.includes('/apps/api/') || path.includes('/prisma/'))).toBe(false);
+    expect(JSON.parse(strFromU8(frontendFiles['sample-app/package.json']!)).dependencies).not.toHaveProperty('@nestjs/common');
+  });
+
+  it('omits database files and dependencies from API-only output when no database is selected', () => {
+    const apiWithoutDatabase = {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      stack: { ...config.stack, frontend: 'none', database: 'none', orm: 'none' },
+    };
+    const files = unzipSync(createArchive(apiWithoutDatabase));
+    const names = Object.keys(files);
+    expect(names).not.toContain('sample-app/prisma/schema.prisma');
+    expect(names).not.toContain('sample-app/packages/contracts/src/index.ts');
+    expect(JSON.parse(strFromU8(files['sample-app/package.json']!)).scripts).not.toHaveProperty('db:generate');
+    expect(JSON.parse(strFromU8(files['sample-app/apps/api/package.json']!)).dependencies).not.toHaveProperty('@sample-app/contracts');
+    expect(strFromU8(files['sample-app/README.md']!)).toContain('no database or persistent storage');
+  });
 });

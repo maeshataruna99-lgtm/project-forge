@@ -7,9 +7,15 @@ export type CompatibilityIssue = {
 };
 
 const later = 'This option has no generator template yet. Choose the available option.';
-const choices = (items: Array<[string, string]>, enabled: string[] = [], requiresByValue: Record<string, Array<{ path: string; equals: string | boolean }>> = {}) => items.map(([value, label]) => ({
+const choices = (
+  items: Array<[string, string]>,
+  enabled: string[] = [],
+  requiresByValue: Record<string, Array<{ path: string; equals: string | boolean }>> = {},
+  conflictsByValue: Record<string, Array<{ path: string; equals: string | boolean }>> = {},
+) => items.map(([value, label]) => ({
   value, label, available: enabled.includes(value), ...(enabled.includes(value) ? {} : { reason: later }),
   ...(requiresByValue[value] ? { requires: requiresByValue[value] } : {}),
+  ...(conflictsByValue[value] ? { conflicts: conflictsByValue[value] } : {}),
 }));
 const booleans = (enabled = false, requirements: Array<{ path: string; equals: string | boolean }> = []) => [
   { value: 'false', label: 'Disabled', available: true },
@@ -19,13 +25,27 @@ const booleans = (enabled = false, requirements: Array<{ path: string; equals: s
 export const catalog: GeneratorCatalog = {
   profiles: choices([['minimal', 'Minimal'], ['enterprise', 'Enterprise']], ['minimal', 'enterprise']),
   blueprints: choices([['blank-fullstack', 'Blank Fullstack'], ['ecommerce', 'E-commerce']], ['blank-fullstack']),
-  shapes: choices([['fullstack', 'Fullstack'], ['api-only', 'API only'], ['frontend-only', 'Frontend only']], ['fullstack']),
-  layouts: choices([['monorepo', 'Monorepo'], ['single-app', 'Single app']], ['monorepo']),
+  shapes: choices([['fullstack', 'Fullstack'], ['api-only', 'API only'], ['frontend-only', 'Frontend only']], ['fullstack', 'api-only', 'frontend-only'], {
+    'api-only': [{ path: 'stack.backend', equals: 'nestjs' }, { path: 'stack.frontend', equals: 'none' }],
+    'frontend-only': [
+      { path: 'stack.backend', equals: 'none' }, { path: 'stack.frontend', equals: 'vue-vite' },
+      { path: 'stack.database', equals: 'none' }, { path: 'stack.orm', equals: 'none' }, { path: 'dataMode', equals: 'demo' },
+    ],
+  }),
+  layouts: choices([['monorepo', 'Monorepo'], ['single-app', 'Single app']], ['monorepo', 'single-app'], {}, {
+    'single-app': [{ path: 'project.shape', equals: 'fullstack' }],
+  }),
   languages: choices([['typescript', 'TypeScript'], ['php', 'PHP']], ['typescript']),
-  backends: choices([['nestjs', 'NestJS'], ['laravel', 'Laravel'], ['none', 'No backend']], ['nestjs']),
-  frontends: choices([['vue-vite', 'Vue and Vite'], ['none', 'No frontend']], ['vue-vite']),
-  databases: choices([['postgresql', 'PostgreSQL'], ['none', 'No database']], ['postgresql']),
-  orms: choices([['prisma', 'Prisma'], ['eloquent', 'Eloquent'], ['none', 'No ORM']], ['prisma']),
+  backends: choices([['nestjs', 'NestJS'], ['laravel', 'Laravel'], ['none', 'No backend']], ['nestjs', 'none'], { none: [
+    { path: 'project.shape', equals: 'frontend-only' }, { path: 'stack.frontend', equals: 'vue-vite' }, { path: 'stack.database', equals: 'none' }, { path: 'stack.orm', equals: 'none' }, { path: 'dataMode', equals: 'demo' },
+  ] }),
+  frontends: choices([['vue-vite', 'Vue and Vite'], ['none', 'No frontend']], ['vue-vite', 'none'], { none: [{ path: 'project.shape', equals: 'api-only' }] }),
+  databases: choices([['postgresql', 'PostgreSQL'], ['none', 'No database']], ['postgresql', 'none'], { none: [
+    { path: 'project.shape', equals: 'frontend-only' }, { path: 'stack.backend', equals: 'none' }, { path: 'stack.orm', equals: 'none' }, { path: 'dataMode', equals: 'demo' },
+  ] }),
+  orms: choices([['prisma', 'Prisma'], ['eloquent', 'Eloquent'], ['none', 'No ORM']], ['prisma', 'none'], { none: [
+    { path: 'project.shape', equals: 'frontend-only' }, { path: 'stack.backend', equals: 'none' }, { path: 'stack.database', equals: 'none' }, { path: 'dataMode', equals: 'demo' },
+  ] }),
   packageManagers: choices([['pnpm', 'pnpm']], ['pnpm']),
   taskRunners: choices([['none', 'None'], ['turborepo', 'Turborepo']], ['none']),
   companyModes: choices([['single', 'Single company'], ['multi', 'Multiple companies']], ['single', 'multi']),
@@ -35,7 +55,9 @@ export const catalog: GeneratorCatalog = {
   audit: booleans(true, [{ path: 'features.auth', equals: true }]), redis: booleans(), docker: booleans(), queue: booleans(), realtime: booleans(),
   apiDocs: booleans(), smtp: booleans(), uploads: booleans(), generatedTests: booleans(), logging: booleans(),
   ciCd: booleans(), rateLimit: booleans(),
-  dataModes: choices([['api-backed', 'API-backed'], ['demo', 'Demo data']], ['api-backed']),
+  dataModes: choices([['api-backed', 'API-backed'], ['demo', 'Demo data']], ['api-backed', 'demo'], { demo: [
+    { path: 'project.shape', equals: 'frontend-only' }, { path: 'stack.backend', equals: 'none' }, { path: 'stack.database', equals: 'none' }, { path: 'stack.orm', equals: 'none' },
+  ] }),
   deploymentProfiles: choices([['local', 'Local'], ['docker', 'Docker'], ['vercel', 'Vercel'], ['vps', 'VPS']], ['local']),
   outputDestinations: choices([['zip', 'Download ZIP'], ['github', 'Push to GitHub']], ['zip']),
   themes: choices([
@@ -58,17 +80,40 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   };
   const matches = (path: string, value: string, supported: string) => { if (value !== supported) unavailable(path, value); };
   matches('project.blueprint', config.project.blueprint, 'blank-fullstack');
-  matches('project.shape', config.project.shape, 'fullstack');
-  matches('repository.layout', config.repository.layout, 'monorepo');
+  if (config.project.shape === 'fullstack' && config.repository.layout === 'single-app') {
+    issues.push({ path: 'repository.layout', code: 'FEATURE_DEPENDENCY', message: 'Single-app layout currently supports API-only and frontend-only projects.' });
+  }
   matches('repository.taskRunner', config.repository.taskRunner, 'none');
   matches('stack.language', config.stack.language, 'typescript');
-  matches('stack.backend', config.stack.backend, 'nestjs');
-  matches('stack.frontend', config.stack.frontend, 'vue-vite');
-  matches('stack.database', config.stack.database, 'postgresql');
-  matches('stack.orm', config.stack.orm, 'prisma');
+  if (config.project.shape === 'fullstack') {
+    matches('stack.backend', config.stack.backend, 'nestjs');
+    matches('stack.frontend', config.stack.frontend, 'vue-vite');
+    matches('stack.database', config.stack.database, 'postgresql');
+    matches('stack.orm', config.stack.orm, 'prisma');
+  } else if (config.project.shape === 'api-only') {
+    matches('stack.backend', config.stack.backend, 'nestjs');
+    matches('stack.frontend', config.stack.frontend, 'none');
+    if (config.stack.database === 'postgresql') matches('stack.orm', config.stack.orm, 'prisma');
+    else {
+      matches('stack.database', config.stack.database, 'none');
+      matches('stack.orm', config.stack.orm, 'none');
+      if (config.features.auth || config.project.profile === 'enterprise') {
+        issues.push({ path: 'stack.database', code: 'FEATURE_DEPENDENCY', message: 'Authentication requires a persistent database. Select PostgreSQL or disable authentication.' });
+      }
+    }
+  } else {
+    matches('stack.backend', config.stack.backend, 'none');
+    matches('stack.frontend', config.stack.frontend, 'vue-vite');
+    matches('stack.database', config.stack.database, 'none');
+    matches('stack.orm', config.stack.orm, 'none');
+    matches('dataMode', config.dataMode, 'demo');
+    if (config.features.auth || config.features.rbac || config.features.audit || config.features.navigation === 'dynamic' || config.project.profile === 'enterprise' || config.company.mode === 'multi') {
+      issues.push({ path: 'project.shape', code: 'FEATURE_DEPENDENCY', message: 'Frontend-only output cannot enforce server-side identity or company isolation.' });
+    }
+  }
   matches('company.superAdminScope', config.company.superAdminScope, 'company');
   matches('features.authStrategy', config.features.authStrategy, 'jwt-refresh');
-  matches('dataMode', config.dataMode, 'api-backed');
+  if (config.project.shape !== 'frontend-only') matches('dataMode', config.dataMode, 'api-backed');
   matches('deploymentProfile', config.deploymentProfile, 'local');
   matches('output.destination', config.output.destination, 'zip');
   matches('theme.preset', config.theme.preset, 'modern-saas');
