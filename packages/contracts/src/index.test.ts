@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectConfigSchema } from './index';
+import { catalogSchema, projectConfigSchema } from './index';
 
 const validConfig = {
   schemaVersion: 2,
@@ -49,3 +49,17 @@ describe('projectConfigSchema', () => {
 });
 
 export { validConfig };
+
+describe('catalogSchema', () => {
+  it('requires every wizard selection category and a reason for unavailable choices', () => {
+    const categories = [
+      'profiles', 'blueprints', 'shapes', 'layouts', 'languages', 'backends', 'frontends',
+      'databases', 'orms', 'packageManagers', 'taskRunners', 'companyModes',
+      'superAdminScopes', 'auth', 'rbac', 'navigation', 'audit', 'redis', 'docker', 'themes', 'themeModes',
+    ];
+    const complete = Object.fromEntries(categories.map(key => [key, [{ value: 'sample', label: 'Sample', available: true }]]));
+    expect(catalogSchema.safeParse(complete).success).toBe(true);
+    expect(catalogSchema.safeParse({ ...complete, backends: undefined }).success).toBe(false);
+    expect(catalogSchema.safeParse({ ...complete, auth: [{ value: 'true', label: 'Enabled', available: false }] }).success).toBe(false);
+  });
+});
