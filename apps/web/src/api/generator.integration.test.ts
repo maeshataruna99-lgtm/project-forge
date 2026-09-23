@@ -110,4 +110,44 @@ describe('catalog to validated ZIP journey', () => {
     await tick();
     expect(downloads).toEqual(['sample-app.zip']);
   });
+
+  it('ignores a stale archive failure after the configuration changes and validates again', async () => {
+    let failArchive!: (error: Error) => void;
+    const archiveResponse = new Promise<Response>((_resolve, reject) => { failArchive = reject; });
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json(catalog)).mockResolvedValueOnce(Response.json(plan))
+      .mockReturnValueOnce(archiveResponse)
+      .mockResolvedValueOnce(Response.json({ ...plan, theme: { ...plan.theme, mode: 'dark' } }));
+    const wrapper = await setup(fetchMock);
+    await review(wrapper);
+    await wrapper.get('button[aria-label="Download ZIP archive"]').trigger('click');
+    await wrapper.get('button[aria-label="Back to Theme"]').trigger('click');
+    await wrapper.get('select#themeMode').setValue('dark');
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await tick();
+    failArchive(new Error('Old archive failed'));
+    await tick();
+    expect(wrapper.text()).not.toContain('Old archive failed');
+    expect(wrapper.get('button[aria-label="Download ZIP archive"]').attributes('disabled')).toBeUndefined();
+  });
+
+  it('ignores a stale archive success even if the configuration returns to its original value', async () => {
+    let finishArchive!: (response: Response) => void;
+    const archiveResponse = new Promise<Response>(resolve => { finishArchive = resolve; });
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json(catalog)).mockResolvedValueOnce(Response.json(plan))
+      .mockReturnValueOnce(archiveResponse).mockResolvedValueOnce(Response.json(plan));
+    const create = vi.fn().mockReturnValue('blob:test');
+    vi.stubGlobal('URL', { createObjectURL: create, revokeObjectURL: vi.fn() });
+    const wrapper = await setup(fetchMock);
+    await review(wrapper);
+    await wrapper.get('button[aria-label="Download ZIP archive"]').trigger('click');
+    await wrapper.get('button[aria-label="Back to Theme"]').trigger('click');
+    await wrapper.get('select#themeMode').setValue('dark');
+    await wrapper.get('select#themeMode').setValue('light');
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await tick();
+    finishArchive(new Response(new Uint8Array([80, 75]), { status: 201 }));
+    await tick();
+    expect(create).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain('ZIP download started');
+  });
 });

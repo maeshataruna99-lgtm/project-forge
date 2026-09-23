@@ -25,6 +25,7 @@ const archiveError = ref<GeneratorApiError>();
 const validating = ref(false);
 const archiveState = ref<'idle' | 'downloading' | 'error' | 'complete'>('idle');
 let validationRevision = 0;
+let archiveRevision = 0;
 let validatedConfig = '';
 
 onMounted(async () => {
@@ -40,6 +41,7 @@ watch(current, async () => {
 
 function invalidateValidation() {
   validationRevision++;
+  archiveRevision++;
   validatedConfig = '';
   plan.value = undefined;
   validationError.value = undefined;
@@ -55,6 +57,7 @@ function asApiError(error: unknown): GeneratorApiError {
 async function validate() {
   if (validating.value) return;
   const revision = ++validationRevision;
+  archiveRevision++;
   const snapshot = JSON.stringify(config.value);
   validatedConfig = '';
   plan.value = undefined;
@@ -77,11 +80,12 @@ async function validate() {
 async function archive() {
   const snapshot = JSON.stringify(config.value);
   if (!plan.value || validating.value || archiveState.value === 'downloading' || snapshot !== validatedConfig) return;
+  const revision = ++archiveRevision;
   archiveState.value = 'downloading';
   archiveError.value = undefined;
   try {
     const { blob, filename } = await downloadArchive(config.value);
-    if (snapshot !== validatedConfig) return;
+    if (revision !== archiveRevision || snapshot !== validatedConfig) return;
     const url = URL.createObjectURL(blob);
     try {
       const link = document.createElement('a');
@@ -94,6 +98,7 @@ async function archive() {
     }
     archiveState.value = 'complete';
   } catch (error) {
+    if (revision !== archiveRevision) return;
     archiveError.value = asApiError(error);
     archiveState.value = 'error';
   }
