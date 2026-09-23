@@ -26,6 +26,19 @@ describe('generator core', () => {
     expect(plan.files).toContain('prisma/schema.prisma');
   });
 
+  it('omits disabled optional integrations and their generated dependencies', () => {
+    const files = unzipSync(createArchive(config));
+    const destinations = Object.keys(files);
+    const apiManifest = JSON.parse(strFromU8(files['sample-app/apps/api/package.json']!));
+    expect(destinations.some(path => path.includes('/apps/api/src/redis/'))).toBe(false);
+    expect(destinations.some(path => path.includes('/apps/api/src/queue/'))).toBe(false);
+    expect(destinations.some(path => path.includes('/apps/api/src/realtime/'))).toBe(false);
+    expect(destinations).not.toContain('sample-app/.github/workflows/verify-generated.yml');
+    expect(apiManifest.dependencies).not.toHaveProperty('ioredis');
+    expect(apiManifest.dependencies).not.toHaveProperty('nodemailer');
+    expect(strFromU8(files['sample-app/README.md']!)).not.toContain('__OPTIONAL_README__');
+  });
+
   it('rejects an unsupported configuration before rendering', () => {
     expect(() => createPlan({ ...config, features: { ...config.features, audit: true } })).toThrow(ConfigurationError);
   });
@@ -258,5 +271,59 @@ describe('generator core', () => {
     const themed = { ...config, theme: { ...config.theme, preset } };
     const files = unzipSync(createArchive(themed));
     expect(strFromU8(files['sample-app/apps/web/src/style.css']!)).toContain(`--background: ${background}`);
+  });
+
+  it('composes selected integrations and Docker deployment without orphan files', () => {
+    const integrated = {
+      ...config,
+      features: {
+        ...config.features, redis: true, docker: true, queue: true, realtime: true, apiDocs: true,
+        smtp: true, uploads: true, generatedTests: true, logging: true, ciCd: true, rateLimit: true,
+      },
+      deploymentProfile: 'docker',
+    };
+    const plan = createPlan(integrated);
+    for (const path of [
+      'apps/api/src/redis/redis.module.ts', 'apps/api/src/queue/queue.module.ts',
+      'apps/api/src/realtime/realtime.gateway.ts', 'apps/api/src/api-docs/setup.ts',
+      'apps/api/src/email/email.service.ts', 'apps/api/src/uploads/uploads.controller.ts',
+      'apps/api/src/rate-limit/api-rate-limit.guard.ts', 'apps/api/src/logging/structured-logger.ts',
+      'apps/api/src/generated-feature.test.ts', '.github/workflows/verify-generated.yml',
+      'docker-compose.yml', 'deploy/docker/Dockerfile.api', 'deploy/docker/Dockerfile.web',
+    ]) expect(plan.files, path).toContain(path);
+    const files = unzipSync(createArchive(integrated));
+    const apiManifest = JSON.parse(strFromU8(files['sample-app/apps/api/package.json']!));
+    expect(apiManifest.dependencies).toMatchObject({ ioredis: expect.any(String), '@nestjs/swagger': expect.any(String), nodemailer: expect.any(String) });
+    expect(strFromU8(files['sample-app/.env.example']!)).toContain('REDIS_URL=');
+    expect(strFromU8(files['sample-app/docker-compose.yml']!)).toContain('postgres:');
+    expect(strFromU8(files['sample-app/deploy/docker/Dockerfile.api']!)).toContain('pnpm db:generate');
+    expect(Object.values(files).some(file => strFromU8(file).includes('__'))).toBe(false);
+  });
+
+  it('emits only the selected Vercel and VPS deployment recipes', () => {
+    const vercel = {
+      ...config,
+      project: { ...config.project, shape: 'frontend-only' },
+      stack: { ...config.stack, backend: 'none', database: 'none', orm: 'none' },
+      dataMode: 'demo', deploymentProfile: 'vercel',
+    };
+    expect(createPlan(vercel).files).toContain('vercel.json');
+    expect(createPlan({ ...config, deploymentProfile: 'vps' }).files).toContain('deploy/vps/README.md');
+  });
+
+  it('emits Docker compose manifests without a phantom database for database-free API projects', () => {
+    const noDatabaseApi = {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      stack: { ...config.stack, frontend: 'none', database: 'none', orm: 'none' },
+      deploymentProfile: 'docker',
+    };
+    const apiFiles = unzipSync(createArchive(noDatabaseApi));
+    const apiCompose = strFromU8(apiFiles['sample-app/docker-compose.yml']!);
+    expect(apiCompose).toContain('PORT: 3000');
+    expect(apiCompose).not.toContain('postgres:');
+    expect(apiCompose).not.toContain('DATABASE_URL');
+    expect(apiFiles).toHaveProperty('sample-app/.env.example');
+
   });
 });

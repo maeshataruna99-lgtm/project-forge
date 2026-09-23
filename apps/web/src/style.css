@@ -53,6 +53,7 @@ h2 { font-size: 1.65rem; letter-spacing: -.025em; margin: 0; }
 .preview-accent { color: var(--preview-accent); font-weight: 700; }
 .contrast-feedback { display: grid; gap: .25rem; padding-left: 1.25rem; font-size: .875rem; }
 .contrast-feedback--low { color: #a11b1b; font-weight: 650; }
+.demo-data-notice { border-left: 4px solid #b45309; background: #fffbeb; padding: .8rem 1rem; border-radius: .5rem; color: #78350f; }
 .review-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 1.5rem 0; }
 .review-summary div { border: 1px solid #e2e8f0; border-radius: .5rem; padding: .65rem; min-width: 0; }
 .review-summary dt { color: #64748b; font-size: .8rem; }

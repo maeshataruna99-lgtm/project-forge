@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "tsx watch apps/api/src/main.ts",
+    "start": "node apps/api/dist/main.js",
     "build": "tsc -p apps/api/tsconfig.json",
     "test": "vitest run",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
@@ -13,7 +14,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7", "@nestjs/common": "^11.1.0", "@nestjs/core": "^11.1.0",
-    "@nestjs/platform-express": "^11.1.0", "@prisma/client": "^6.19.0", "express": "^5.1.0", "reflect-metadata": "^0.2.2", "rxjs": "^7.8.0"
+    "@nestjs/platform-express": "^11.1.0", "@prisma/client": "^6.19.0", "express": "^5.1.0", "reflect-metadata": "^0.2.2", "rxjs": "^7.8.0"__OPTIONAL_API_DEPENDENCIES__
   },
-  "devDependencies": { "@types/express": "^5.0.0", "@types/node": "^22.0.0", "prisma": "^6.19.0", "tsx": "^4.20.0", "typescript": "^5.9.0", "vitest": "^3.2.0" }
+  "devDependencies": { "@types/express": "^5.0.0", "@types/node": "^22.0.0", "prisma": "^6.19.0", "tsx": "^4.20.0", "typescript": "^5.9.0", "vitest": "^3.2.0"__OPTIONAL_API_DEV_DEPENDENCIES__ }
 }

@@ -1,0 +1,19 @@
+[Unit]
+Description=Project Forge generated API
+After=network.target
+
+[Service]
+Type=simple
+User=project-forge
+WorkingDirectory=/srv/project-forge
+EnvironmentFile=/etc/project-forge/api.env
+ExecStart=/usr/bin/pnpm --filter @__PROJECT_NAME__/api start
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/project-forge
+
+[Install]
+WantedBy=multi-user.target

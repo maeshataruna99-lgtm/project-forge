@@ -26,19 +26,19 @@ const catalog = {
   rbac: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
   navigation: [available('none', 'None'), unavailable('dynamic', 'Dynamic')],
   audit: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  redis: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  docker: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  queue: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  realtime: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  apiDocs: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  smtp: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  uploads: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  generatedTests: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  logging: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  ciCd: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  rateLimit: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
-  dataModes: [available('api-backed', 'API-backed'), unavailable('demo', 'Demo data')],
-  deploymentProfiles: [available('local', 'Local'), unavailable('docker', 'Docker'), unavailable('vercel', 'Vercel'), unavailable('vps', 'VPS')],
+  redis: [available('false', 'Disabled'), available('true', 'Enabled')],
+  docker: [available('false', 'Disabled'), available('true', 'Enabled')],
+  queue: [available('false', 'Disabled'), available('true', 'Enabled')],
+  realtime: [available('false', 'Disabled'), available('true', 'Enabled')],
+  apiDocs: [available('false', 'Disabled'), available('true', 'Enabled')],
+  smtp: [available('false', 'Disabled'), available('true', 'Enabled')],
+  uploads: [available('false', 'Disabled'), available('true', 'Enabled')],
+  generatedTests: [available('false', 'Disabled'), available('true', 'Enabled')],
+  logging: [available('false', 'Disabled'), available('true', 'Enabled')],
+  ciCd: [available('false', 'Disabled'), available('true', 'Enabled')],
+  rateLimit: [available('false', 'Disabled'), available('true', 'Enabled')],
+  dataModes: [available('api-backed', 'API-backed'), available('demo', 'Demo data')],
+  deploymentProfiles: ['local', 'docker', 'vercel', 'vps'].map(value => available(value, value)),
   outputDestinations: [available('zip', 'Download ZIP'), unavailable('github', 'Push to GitHub')],
   themes: ['modern-saas', 'ecommerce-store', 'admin-dashboard', 'pos', 'warehouse-industrial', 'soft-pastel', 'dark-developer', 'corporate'].map(value => available(value, value)),
   palettes: ['blue', 'emerald', 'purple', 'amber', 'rose', 'custom'].map(value => available(value, value)),
@@ -164,6 +164,16 @@ describe('configuration wizard', () => {
     expect((wrapper.get('#themePreset').element as HTMLSelectElement).value).toBe('ecommerce-store');
     expect(wrapper.get('[data-testid="theme-preview"]').attributes('data-preset')).toBe('ecommerce-store');
     expect((wrapper.get('#primary').element as HTMLInputElement).value).toBe('#fb923c');
+  });
+
+  it('exposes the supported data, deployment, and optional integration controls', async () => {
+    const wrapper = await setup();
+    await wrapper.get('button[type="submit"]').trigger('click');
+    for (const id of ['deploymentProfile', 'dataMode']) expect(wrapper.find(`#${id}`).exists()).toBe(true);
+    await wrapper.get('button[type="submit"]').trigger('click');
+    for (const id of ['redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit']) {
+      expect(wrapper.find(`#${id}`).exists(), id).toBe(true);
+    }
   });
 
   it('moves focus to each new heading after Next, Back, and step navigation', async () => {

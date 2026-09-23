@@ -25,6 +25,7 @@ function issueFor(path: string) { return props.validationError?.issues?.filter(i
   <section aria-labelledby="review-heading">
     <h2 id="review-heading" tabindex="-1">Review and generate</h2>
     <p class="step-description">Check your choices and generated files before downloading.</p>
+    <p v-if="config.dataMode === 'demo'" class="demo-data-notice" role="note">Demo data is saved only in this browser. It is not secure, shared, or durable. Server-side authentication and authorization are unavailable in this mode.</p>
     <dl class="review-summary">
       <div v-for="setting in settings" :key="setting.path" :data-config-path="setting.path">
         <dt>{{ setting.path }}</dt><dd>{{ setting.value }}</dd>

@@ -48,6 +48,39 @@ const ecommerceFiles: RegisteredFile[] = [
   { source: 'blueprints/ecommerce/apps/api/src/products/products.module.ts', destination: 'apps/api/src/products/products.module.ts' },
   { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.test.ts', destination: 'apps/api/src/products/products.controller.test.ts' },
 ];
+const redisFiles: RegisteredFile[] = [
+  { source: 'fragments/redis/redis.service.ts', destination: 'apps/api/src/redis/redis.service.ts' },
+  { source: 'fragments/redis/redis.module.ts', destination: 'apps/api/src/redis/redis.module.ts' },
+  { source: 'fragments/redis/redis.service.test.ts', destination: 'apps/api/src/redis/redis.service.test.ts' },
+];
+const queueFiles: RegisteredFile[] = [
+  { source: 'fragments/queue/queue.service.ts', destination: 'apps/api/src/queue/queue.service.ts' },
+  { source: 'fragments/queue/queue.controller.ts', destination: 'apps/api/src/queue/queue.controller.ts' },
+  { source: 'fragments/queue/queue.module.ts', destination: 'apps/api/src/queue/queue.module.ts' },
+  { source: 'fragments/queue/queue.service.test.ts', destination: 'apps/api/src/queue/queue.service.test.ts' },
+];
+const realtimeFiles: RegisteredFile[] = [
+  { source: 'fragments/realtime/realtime.gateway.ts', destination: 'apps/api/src/realtime/realtime.gateway.ts' },
+  { source: 'fragments/realtime/realtime.module.ts', destination: 'apps/api/src/realtime/realtime.module.ts' },
+];
+const apiDocsFiles: RegisteredFile[] = [{ source: 'fragments/api-docs/setup.ts', destination: 'apps/api/src/api-docs/setup.ts' }];
+const smtpFiles: RegisteredFile[] = [
+  { source: 'fragments/email/email.service.ts', destination: 'apps/api/src/email/email.service.ts' },
+  { source: 'fragments/email/email.module.ts', destination: 'apps/api/src/email/email.module.ts' },
+  { source: 'fragments/email/nodemailer.d.ts', destination: 'apps/api/src/email/nodemailer.d.ts' },
+];
+const uploadFiles: RegisteredFile[] = [
+  { source: 'fragments/uploads/uploads.controller.ts', destination: 'apps/api/src/uploads/uploads.controller.ts' },
+  { source: 'fragments/uploads/uploads.module.ts', destination: 'apps/api/src/uploads/uploads.module.ts' },
+];
+const loggingFiles: RegisteredFile[] = [
+  { source: 'fragments/logging/structured-logger.ts', destination: 'apps/api/src/logging/structured-logger.ts' },
+  { source: 'fragments/logging/structured-logger.test.ts', destination: 'apps/api/src/logging/structured-logger.test.ts' },
+];
+const rateLimitFiles: RegisteredFile[] = [
+  { source: 'fragments/rate-limit/api-rate-limit.guard.ts', destination: 'apps/api/src/rate-limit/api-rate-limit.guard.ts' },
+  { source: 'fragments/rate-limit/api-rate-limit.guard.test.ts', destination: 'apps/api/src/rate-limit/api-rate-limit.guard.test.ts' },
+];
 
 export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
   const files: RegisteredFile[] = [];
@@ -57,6 +90,19 @@ export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
   if (config.features.rbac) files.push(...rbacFiles);
   if (config.features.navigation === 'dynamic') files.push(...navigationFiles);
   if (config.features.audit) files.push(...auditFiles);
+  if (config.features.redis) files.push(...redisFiles);
+  if (config.features.queue) files.push(...queueFiles);
+  if (config.features.realtime) files.push(...realtimeFiles);
+  if (config.features.apiDocs) files.push(...apiDocsFiles);
+  if (config.features.smtp) files.push(...smtpFiles);
+  if (config.features.uploads) files.push(...uploadFiles);
+  if (config.features.logging) files.push(...loggingFiles);
+  if (config.features.rateLimit) files.push(...rateLimitFiles);
+  if (config.features.generatedTests) files.push({ source: 'fragments/generated-tests/generated-feature.test.ts', destination: 'apps/api/src/generated-feature.test.ts' });
+  if (config.features.ciCd) files.push({
+    source: config.project.shape === 'frontend-only' ? 'fragments/ci-cd/verify-web.yml' : 'fragments/ci-cd/verify.yml',
+    destination: '.github/workflows/verify-generated.yml',
+  });
   if (config.project.blueprint === 'ecommerce') {
     files.push(...ecommerceFiles.map(file => config.features.rbac && file.destination.endsWith('products.controller.ts')
       ? { ...file, source: 'blueprints/ecommerce/apps/api/src/products/products.controller.secured.ts' }

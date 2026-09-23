@@ -134,6 +134,39 @@ describe('first template registry', () => {
     );
   });
 
+  it('enables server integrations only for compatible server shapes and requires Redis for queueing', () => {
+    const queueWithoutRedis = { ...base, features: { ...base.features, queue: true } };
+    expect(validateCompatibility(queueWithoutRedis)).toContainEqual(
+      expect.objectContaining({ path: 'features.redis', code: 'FEATURE_DEPENDENCY' }),
+    );
+    expect(validateCompatibility({ ...base, features: { ...base.features, redis: true, queue: true } })).toEqual([]);
+    const frontendOnly = {
+      ...base,
+      project: { ...base.project, shape: 'frontend-only' as const },
+      stack: { ...base.stack, backend: 'none' as const, database: 'none' as const, orm: 'none' as const },
+      dataMode: 'demo' as const,
+      features: { ...base.features, apiDocs: true },
+    };
+    expect(validateCompatibility(frontendOnly)).toContainEqual(
+      expect.objectContaining({ path: 'features.apiDocs', code: 'FEATURE_DEPENDENCY' }),
+    );
+  });
+
+  it('allows supported deployment profiles and scopes Vercel to frontend-only output', () => {
+    expect(validateCompatibility({ ...base, deploymentProfile: 'docker' })).toEqual([]);
+    expect(validateCompatibility({ ...base, deploymentProfile: 'vps' })).toEqual([]);
+    expect(validateCompatibility({ ...base, deploymentProfile: 'vercel' })).toContainEqual(
+      expect.objectContaining({ path: 'deploymentProfile', code: 'FEATURE_DEPENDENCY' }),
+    );
+    expect(validateCompatibility({
+      ...base,
+      project: { ...base.project, shape: 'frontend-only' as const },
+      stack: { ...base.stack, backend: 'none' as const, database: 'none' as const, orm: 'none' as const },
+      dataMode: 'demo' as const,
+      deploymentProfile: 'vercel',
+    })).toEqual([]);
+  });
+
   it('supports multiple companies with authentication enabled', () => {
     expect(validateCompatibility({
       ...base,
@@ -143,10 +176,8 @@ describe('first template registry', () => {
     })).toEqual([]);
   });
 
-  it('rejects optional infrastructure with no template fragment yet', () => {
-    expect(validateCompatibility({ ...base, features: { ...base.features, redis: true } })).toContainEqual(
-      expect.objectContaining({ path: 'features.redis', code: 'FEATURE_UNAVAILABLE' }),
-    );
+  it('exposes implemented optional infrastructure as available', () => {
+    expect(validateCompatibility({ ...base, features: { ...base.features, redis: true } })).toEqual([]);
   });
 
   it('publishes machine readable availability', () => {
@@ -240,6 +271,12 @@ describe('first template registry', () => {
         }
         if (category === 'layouts' && choice.value === 'single-app') {
           candidate.stack.frontend = 'none';
+        }
+        if (category === 'deploymentProfiles' && choice.value === 'vercel') {
+          candidate.stack.backend = 'none';
+          candidate.stack.database = 'none';
+          candidate.stack.orm = 'none';
+          candidate.dataMode = 'demo';
         }
         expect(validateCompatibility(candidate).length === 0, `${category}.${choice.value}`).toBe(choice.available);
       }

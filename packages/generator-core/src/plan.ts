@@ -49,7 +49,9 @@ function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
       sources.set('apps/api/tsconfig.json', 'layouts/single-app/api-tsconfig.json');
       sources.set('apps/api/src/health.controller.ts', 'layouts/single-app/api-health.controller.ts');
       if (config.stack.database !== 'postgresql') {
-        manifest = singleApiManifest.filter(path => path !== '.env.example');
+        if (!config.features.redis && !config.features.smtp && !config.features.docker && config.deploymentProfile !== 'docker') {
+          manifest = singleApiManifest.filter(path => path !== '.env.example');
+        }
         sources.set('package.json', 'layouts/single-app/api-no-db-package.json');
       }
       sources.set('README.md', 'shapes/api-only/README.md');
@@ -68,7 +70,9 @@ function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
     manifest = config.stack.database === 'postgresql' ? apiManifest : apiNoDatabaseManifest;
     if (config.stack.database === 'postgresql') manifest = [...apiManifest, 'prisma/schema.prisma'];
     else {
-      manifest = apiNoDatabaseManifest.filter(path => path !== '.env.example');
+      if (!config.features.redis && !config.features.smtp && !config.features.docker && config.deploymentProfile !== 'docker') {
+        manifest = apiNoDatabaseManifest.filter(path => path !== '.env.example');
+      }
       sources.set('apps/api/package.json', 'shapes/api-only/api-package-no-db.json');
       sources.set('apps/api/src/health.controller.ts', 'layouts/single-app/api-health.controller.ts');
     }
@@ -90,7 +94,44 @@ function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
       sources.set('apps/web/src/App.vue', 'blueprints/ecommerce/apps/web/src/App.vue');
     }
   }
-  return manifest.map(destination => ({ source: sources.get(destination) ?? destination, destination }));
+  const files = manifest.map(destination => ({ source: sources.get(destination) ?? destination, destination }));
+  if (config.features.docker || config.deploymentProfile === 'docker') {
+    files.push(
+      { source: '.dockerignore', destination: '.dockerignore' },
+    );
+    if (config.project.shape !== 'frontend-only') files.push({ source: 'deploy/docker/Dockerfile.api', destination: 'deploy/docker/Dockerfile.api' });
+    if (config.project.shape !== 'api-only') {
+      files.push({ source: 'deploy/docker/Dockerfile.web', destination: 'deploy/docker/Dockerfile.web' });
+      if (config.project.shape === 'frontend-only') {
+        files.push({ source: 'deploy/docker/nginx-static.conf', destination: 'deploy/docker/nginx.conf' });
+        files.push({ source: 'deploy/docker/compose-frontend.yaml', destination: 'docker-compose.yml' });
+      }
+      else {
+        files.push({ source: 'deploy/docker/nginx.conf', destination: 'deploy/docker/nginx.conf' });
+        files.push({ source: 'deploy/docker/compose-fullstack.yaml', destination: 'docker-compose.yml' });
+      }
+    } else {
+      files.push({
+        source: config.stack.database === 'postgresql' ? 'deploy/docker/compose-api.yaml' : 'deploy/docker/compose-api-no-db.yaml',
+        destination: 'docker-compose.yml',
+      });
+    }
+  }
+  if (config.deploymentProfile === 'vercel') {
+    files.push({ source: 'deploy/vercel/vercel.json', destination: 'vercel.json' });
+    files.push({ source: 'deploy/vercel/README.md', destination: 'deploy/vercel/README.md' });
+  }
+  if (config.deploymentProfile === 'vps') {
+    files.push(
+      {
+        source: config.stack.database === 'postgresql' ? 'deploy/vps/README.md' : 'deploy/vps/README-no-db.md',
+        destination: 'deploy/vps/README.md',
+      },
+      { source: 'deploy/vps/project-forge-api.service', destination: 'deploy/vps/project-forge-api.service' },
+      { source: 'deploy/vps/Caddyfile.example', destination: 'deploy/vps/Caddyfile.example' },
+    );
+  }
+  return files;
 }
 
 export type GenerationPlan = {

@@ -80,6 +80,42 @@ const configs = [
       features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
     },
   },
+  {
+    name: 'all-integrations-docker',
+    value: {
+      ...config,
+      project: { ...config.project, profile: 'enterprise' },
+      features: {
+        ...config.features,
+        auth: true,
+        rbac: true,
+        navigation: 'dynamic',
+        audit: true,
+        redis: true,
+        docker: true,
+        queue: true,
+        realtime: true,
+        apiDocs: true,
+        smtp: true,
+        uploads: true,
+        generatedTests: true,
+        logging: true,
+        ciCd: true,
+        rateLimit: true,
+      },
+      deploymentProfile: 'docker',
+    },
+  },
+  {
+    name: 'api-only-no-db-docker',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      stack: { ...config.stack, frontend: 'none', database: 'none', orm: 'none' },
+      features: { ...config.features, docker: true },
+      deploymentProfile: 'docker',
+    },
+  },
 ];
 for (const selected of configs) {
   const files = unzipSync(createArchive(selected.value));

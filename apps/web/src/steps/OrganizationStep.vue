@@ -18,6 +18,15 @@ const emit = defineEmits<{ change: [path: string, value: string] }>();
       <ChoiceField id="audit" label="Audit" :model-value="String(config.features.audit)" :choices="catalog.audit" @update:model-value="emit('change', 'features.audit', $event)" />
       <ChoiceField id="redis" label="Redis" :model-value="String(config.features.redis)" :choices="catalog.redis" @update:model-value="emit('change', 'features.redis', $event)" />
       <ChoiceField id="docker" label="Docker" :model-value="String(config.features.docker)" :choices="catalog.docker" @update:model-value="emit('change', 'features.docker', $event)" />
+      <ChoiceField id="queue" label="Queue" :model-value="String(config.features.queue)" :choices="catalog.queue" @update:model-value="emit('change', 'features.queue', $event)" />
+      <ChoiceField id="realtime" label="Realtime" :model-value="String(config.features.realtime)" :choices="catalog.realtime" @update:model-value="emit('change', 'features.realtime', $event)" />
+      <ChoiceField id="apiDocs" label="API documentation" :model-value="String(config.features.apiDocs)" :choices="catalog.apiDocs" @update:model-value="emit('change', 'features.apiDocs', $event)" />
+      <ChoiceField id="smtp" label="SMTP email" :model-value="String(config.features.smtp)" :choices="catalog.smtp" @update:model-value="emit('change', 'features.smtp', $event)" />
+      <ChoiceField id="uploads" label="Uploads" :model-value="String(config.features.uploads)" :choices="catalog.uploads" @update:model-value="emit('change', 'features.uploads', $event)" />
+      <ChoiceField id="generatedTests" label="Generated tests" :model-value="String(config.features.generatedTests)" :choices="catalog.generatedTests" @update:model-value="emit('change', 'features.generatedTests', $event)" />
+      <ChoiceField id="logging" label="Structured logging" :model-value="String(config.features.logging)" :choices="catalog.logging" @update:model-value="emit('change', 'features.logging', $event)" />
+      <ChoiceField id="ciCd" label="CI workflow" :model-value="String(config.features.ciCd)" :choices="catalog.ciCd" @update:model-value="emit('change', 'features.ciCd', $event)" />
+      <ChoiceField id="rateLimit" label="API rate limit" :model-value="String(config.features.rateLimit)" :choices="catalog.rateLimit" @update:model-value="emit('change', 'features.rateLimit', $event)" />
     </div>
   </section>
 </template>

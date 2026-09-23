@@ -17,6 +17,8 @@ const emit = defineEmits<{ change: [path: string, value: string] }>();
       <ChoiceField id="orm" label="ORM" :model-value="config.stack.orm" :choices="catalog.orms" @update:model-value="emit('change', 'stack.orm', $event)" />
       <ChoiceField id="packageManager" label="Package manager" :model-value="config.repository.packageManager" :choices="catalog.packageManagers" @update:model-value="emit('change', 'repository.packageManager', $event)" />
       <ChoiceField id="taskRunner" label="Task runner" :model-value="config.repository.taskRunner" :choices="catalog.taskRunners" @update:model-value="emit('change', 'repository.taskRunner', $event)" />
+      <ChoiceField id="deploymentProfile" label="Deployment profile" :model-value="config.deploymentProfile" :choices="catalog.deploymentProfiles" @update:model-value="emit('change', 'deploymentProfile', $event)" />
+      <ChoiceField id="dataMode" label="Data mode" :model-value="config.dataMode" :choices="catalog.dataModes" @update:model-value="emit('change', 'dataMode', $event)" />
     </div>
   </section>
 </template>

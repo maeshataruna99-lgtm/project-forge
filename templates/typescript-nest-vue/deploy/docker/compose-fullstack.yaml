@@ -1,0 +1,31 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      PORT: 3000
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+  web:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.web
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: project_forge
+      POSTGRES_USER: project_forge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:

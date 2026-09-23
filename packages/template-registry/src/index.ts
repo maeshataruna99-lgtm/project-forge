@@ -55,13 +55,26 @@ export const catalog: GeneratorCatalog = {
   superAdminScopes: choices([['company', 'Company'], ['global', 'Global']], ['company']),
   auth: booleans(true), authStrategies: choices([['jwt-refresh', 'JWT with refresh tokens'], ['session', 'Session'] ], ['jwt-refresh']),
   rbac: booleans(true, [{ path: 'features.auth', equals: true }]), navigation: choices([['none', 'None'], ['dynamic', 'Dynamic']], ['none', 'dynamic'], { dynamic: [{ path: 'features.rbac', equals: true }, { path: 'features.auth', equals: true }] }),
-  audit: booleans(true, [{ path: 'features.auth', equals: true }]), redis: booleans(), docker: booleans(), queue: booleans(), realtime: booleans(),
-  apiDocs: booleans(), smtp: booleans(), uploads: booleans(), generatedTests: booleans(), logging: booleans(),
-  ciCd: booleans(), rateLimit: booleans(),
+  audit: booleans(true, [{ path: 'features.auth', equals: true }]),
+  redis: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  docker: booleans(true, [{ path: 'repository.layout', equals: 'monorepo' }]),
+  queue: booleans(true, [{ path: 'features.redis', equals: true }, { path: 'stack.database', equals: 'postgresql' }]),
+  realtime: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  apiDocs: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  smtp: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  uploads: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  generatedTests: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  logging: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
+  ciCd: booleans(true),
+  rateLimit: booleans(true, [{ path: 'stack.backend', equals: 'nestjs' }]),
   dataModes: choices([['api-backed', 'API-backed'], ['demo', 'Demo data']], ['api-backed', 'demo'], { demo: [
     { path: 'project.shape', equals: 'frontend-only' }, { path: 'stack.backend', equals: 'none' }, { path: 'stack.database', equals: 'none' }, { path: 'stack.orm', equals: 'none' },
   ] }),
-  deploymentProfiles: choices([['local', 'Local'], ['docker', 'Docker'], ['vercel', 'Vercel'], ['vps', 'VPS']], ['local']),
+  deploymentProfiles: choices([['local', 'Local'], ['docker', 'Docker'], ['vercel', 'Vercel'], ['vps', 'VPS']], ['local', 'docker', 'vercel', 'vps'], {
+    docker: [{ path: 'repository.layout', equals: 'monorepo' }],
+    vercel: [{ path: 'project.shape', equals: 'frontend-only' }, { path: 'repository.layout', equals: 'monorepo' }],
+    vps: [{ path: 'repository.layout', equals: 'monorepo' }],
+  }),
   outputDestinations: choices([['zip', 'Download ZIP'], ['github', 'Push to GitHub']], ['zip']),
   themes: choices(Object.entries(themePresets).map(([value, preset]) => [value, preset.label]), Object.keys(themePresets)),
   palettes: choices([['blue', 'Blue'], ['emerald', 'Emerald'], ['purple', 'Purple'], ['amber', 'Amber'], ['rose', 'Rose'], ['custom', 'Custom']], ['blue', 'emerald', 'purple', 'amber', 'rose', 'custom']),
@@ -83,6 +96,9 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   }
   if (config.project.shape === 'fullstack' && config.repository.layout === 'single-app') {
     issues.push({ path: 'repository.layout', code: 'FEATURE_DEPENDENCY', message: 'Single-app layout currently supports API-only and frontend-only projects.' });
+  }
+  if (config.repository.layout !== 'monorepo' && (config.deploymentProfile !== 'local' || config.features.docker)) {
+    issues.push({ path: 'repository.layout', code: 'FEATURE_DEPENDENCY', message: 'Docker, Vercel, and VPS recipes currently require the monorepo layout.' });
   }
   matches('repository.taskRunner', config.repository.taskRunner, 'none');
   matches('stack.language', config.stack.language, 'typescript');
@@ -115,13 +131,29 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   matches('company.superAdminScope', config.company.superAdminScope, 'company');
   matches('features.authStrategy', config.features.authStrategy, 'jwt-refresh');
   if (config.project.shape !== 'frontend-only') matches('dataMode', config.dataMode, 'api-backed');
-  matches('deploymentProfile', config.deploymentProfile, 'local');
+  if (config.deploymentProfile === 'vercel' && config.project.shape !== 'frontend-only') {
+    issues.push({ path: 'deploymentProfile', code: 'FEATURE_DEPENDENCY', message: 'Vercel deployment currently supports frontend-only static site output.' });
+  }
   matches('output.destination', config.output.destination, 'zip');
   if (config.features.rbac && !config.features.auth) issues.push({ path: 'features.auth', code: 'FEATURE_DEPENDENCY', message: 'RBAC requires authentication. Enable auth or disable RBAC.' });
   if (config.features.navigation === 'dynamic' && !config.features.rbac) issues.push({ path: 'features.rbac', code: 'FEATURE_DEPENDENCY', message: 'Dynamic navigation requires RBAC. Enable RBAC or disable dynamic navigation.' });
   if (config.features.audit && !config.features.auth) issues.push({ path: 'features.auth', code: 'FEATURE_DEPENDENCY', message: 'User audit events require authentication. Enable auth or disable audit.' });
-  for (const feature of ['redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit'] as const) {
-    if (config.features[feature]) unavailable(`features.${feature}`, true);
+  if (config.features.queue && !config.features.redis) {
+    issues.push({ path: 'features.redis', code: 'FEATURE_DEPENDENCY', message: 'Queue requires the Redis integration. Enable Redis or disable queue.' });
+  }
+  if (config.features.queue && config.stack.database !== 'postgresql') {
+    issues.push({ path: 'stack.database', code: 'FEATURE_DEPENDENCY', message: 'Queue requires the PostgreSQL API stack.' });
+  }
+  if (config.project.shape === 'frontend-only') {
+    for (const feature of ['redis', 'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'logging', 'rateLimit'] as const) {
+      if (config.features[feature]) issues.push({ path: `features.${feature}`, code: 'FEATURE_DEPENDENCY', message: `${feature} requires a NestJS API.` });
+    }
+  }
+  if (config.project.shape === 'frontend-only' && config.deploymentProfile === 'vps') {
+    issues.push({ path: 'deploymentProfile', code: 'FEATURE_DEPENDENCY', message: 'The VPS recipe requires a NestJS API; use Local, Docker, or Vercel for frontend-only output.' });
+  }
+  if (config.features.generatedTests && config.stack.backend !== 'nestjs') {
+    issues.push({ path: 'features.generatedTests', code: 'FEATURE_DEPENDENCY', message: 'Generated backend tests require the NestJS API.' });
   }
   return issues;
 }
