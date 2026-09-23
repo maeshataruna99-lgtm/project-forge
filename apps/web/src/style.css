@@ -21,6 +21,8 @@ h2 { font-size: 1.65rem; letter-spacing: -.025em; margin: 0; }
 .stepper button[aria-current="step"]:disabled { opacity: 1; }
 .step-number { flex: none; display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #dbeafe; font-size: .75rem; }
 .wizard-card { background: #fff; border: 1px solid #dbe3ef; border-radius: 1.25rem; padding: clamp(1.25rem, 4vw, 2.5rem); box-shadow: 0 18px 45px rgba(23, 35, 59, .07); }
+.draft-actions { display: flex; justify-content: flex-end; margin-bottom: .75rem; }
+.draft-actions button { border-radius: .6rem; padding: .5rem .8rem; cursor: pointer; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
 .field { min-width: 0; display: flex; flex-direction: column; gap: .4rem; margin-top: 1.25rem; }
 .field-grid .field { margin-top: 0; }

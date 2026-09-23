@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue';
-import { projectConfigSchema, type GeneratorCatalog, type ProjectConfig } from '@project-forge/contracts';
+import { projectConfigSchema, type GeneratorCatalog } from '@project-forge/contracts';
 import { fetchCatalog } from './api/generator';
+import { createWizardState } from './domain/wizard-state';
 import WizardStepper from './components/WizardStepper.vue';
 import ProjectStep from './steps/ProjectStep.vue';
 import StackStep from './steps/StackStep.vue';
@@ -9,21 +10,13 @@ import OrganizationStep from './steps/OrganizationStep.vue';
 import ThemeStep from './steps/ThemeStep.vue';
 
 const steps = ['Project', 'Stack', 'Organization and features', 'Theme', 'Review and generate'] as const;
-const current = ref(0);
+const wizard = createWizardState(window.localStorage);
+const { config, current, update: updateConfig, back, navigate } = wizard;
 const catalog = ref<GeneratorCatalog | null>(null);
 const catalogError = ref('');
 const nameError = ref('');
-const projectNameDraft = ref('sample-app');
+const projectNameDraft = ref(config.value.project.name);
 const wizardForm = ref<HTMLFormElement | null>(null);
-const config = ref<ProjectConfig>({
-  schemaVersion: 2,
-  project: { name: 'sample-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
-  repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
-  stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
-  company: { mode: 'single', superAdminScope: 'company' },
-  features: { auth: false, rbac: false, navigation: 'none', audit: false, redis: false, docker: false },
-  theme: { preset: 'modern-saas', mode: 'light', primary: '#2563EB', accent: '#F59E0B' },
-});
 
 onMounted(async () => {
   try { catalog.value = await fetchCatalog(); }
@@ -36,17 +29,11 @@ watch(current, async () => {
 });
 
 function update(path: string, value: string) {
-  const [section, key, extra] = path.split('.');
-  if (!section || !key || extra || !(section in config.value)) return;
   if (path === 'project.name') {
     projectNameDraft.value = value;
     nameError.value = '';
   }
-  const original = config.value[section as keyof ProjectConfig];
-  if (typeof original !== 'object') return;
-  const nextValue = section === 'features' && key !== 'navigation' ? value === 'true' : value;
-  const result = projectConfigSchema.safeParse({ ...config.value, [section]: { ...original, [key]: nextValue } });
-  if (result.success) config.value = result.data;
+  updateConfig(path, value);
 }
 
 function validProjectName() {
@@ -57,10 +44,14 @@ function validProjectName() {
 
 function next() {
   if (current.value === 0 && !validProjectName()) return;
-  if (current.value < steps.length - 1) current.value++;
+  wizard.next();
 }
-function back() { if (current.value > 0) current.value--; }
-function navigate(index: number) { if (index >= 0 && index < current.value) current.value = index; }
+function resetDraft() {
+  if (!window.confirm('Discard your saved draft and start again?')) return;
+  wizard.reset();
+  projectNameDraft.value = config.value.project.name;
+  nameError.value = '';
+}
 </script>
 
 <template>
@@ -73,6 +64,7 @@ function navigate(index: number) { if (index >= 0 && index < current.value) curr
     <p v-if="catalogError" role="alert" class="load-error">Unable to load project choices: {{ catalogError }}</p>
     <p v-else-if="!catalog" role="status">Loading project choices…</p>
     <template v-else>
+      <div class="draft-actions"><button type="button" class="button-secondary" aria-label="Reset draft" @click="resetDraft">Reset draft</button></div>
       <WizardStepper :steps="steps" :current="current" @navigate="navigate" />
       <form ref="wizardForm" class="wizard-card" novalidate @submit.prevent="next">
         <ProjectStep v-if="current === 0" :config="config" :catalog="catalog" :project-name="projectNameDraft" :name-error="nameError" @change="update" />

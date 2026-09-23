@@ -41,9 +41,33 @@ async function setup() {
   return wrapper;
 }
 
-afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ''; });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); document.body.innerHTML = ''; });
 
 describe('configuration wizard', () => {
+  it('restores saved choices after remounting', async () => {
+    const first = await setup();
+    await first.get('input[name="projectName"]').setValue('saved-app');
+    first.unmount();
+    const second = await setup();
+    expect((second.get('input[name="projectName"]').element as HTMLInputElement).value).toBe('saved-app');
+  });
+
+  it('asks before reset, then removes the saved draft and returns to Project', async () => {
+    const wrapper = await setup();
+    await wrapper.get('input[name="projectName"]').setValue('saved-app');
+    await wrapper.get('button[type="submit"]').trigger('click');
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    await wrapper.get('button[aria-label="Reset draft"]').trigger('click');
+    expect(wrapper.find('h2').text()).toBe('Stack');
+    await wrapper.get('button[aria-label="Reset draft"]').trigger('click');
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('h2').text()).toBe('Project');
+    expect((wrapper.get('input[name="projectName"]').element as HTMLInputElement).value).toBe('sample-app');
+    wrapper.unmount();
+    const reopened = await setup();
+    expect((reopened.get('input[name="projectName"]').element as HTMLInputElement).value).toBe('sample-app');
+  });
+
   it('shows five named steps and advances and returns with keyboard-operable buttons', async () => {
     const wrapper = await setup();
     const names = wrapper.findAll('nav[aria-label="Wizard steps"] li button span:last-child').map(item => item.text());
