@@ -44,6 +44,21 @@ async function setup() {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); document.body.innerHTML = ''; });
 
 describe('configuration wizard', () => {
+  it('opens with defaults when the browser blocks access to local storage', async () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => { throw new DOMException('Storage blocked', 'SecurityError'); },
+    });
+    try {
+      const wrapper = await setup();
+      expect(wrapper.find('h2').text()).toBe('Project');
+      expect((wrapper.get('input[name="projectName"]').element as HTMLInputElement).value).toBe('sample-app');
+    } finally {
+      if (original) Object.defineProperty(window, 'localStorage', original);
+    }
+  });
+
   it('restores saved choices after remounting', async () => {
     const first = await setup();
     await first.get('input[name="projectName"]').setValue('saved-app');

@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref, watch } from 'vue';
 import { projectConfigSchema, type GeneratorCatalog } from '@project-forge/contracts';
 import { fetchCatalog } from './api/generator';
+import { resolveBrowserStorage } from './domain/draft-storage';
 import { createWizardState } from './domain/wizard-state';
 import WizardStepper from './components/WizardStepper.vue';
 import ProjectStep from './steps/ProjectStep.vue';
@@ -10,7 +11,7 @@ import OrganizationStep from './steps/OrganizationStep.vue';
 import ThemeStep from './steps/ThemeStep.vue';
 
 const steps = ['Project', 'Stack', 'Organization and features', 'Theme', 'Review and generate'] as const;
-const wizard = createWizardState(window.localStorage);
+const wizard = createWizardState(resolveBrowserStorage());
 const { config, current, update: updateConfig, back, navigate } = wizard;
 const catalog = ref<GeneratorCatalog | null>(null);
 const catalogError = ref('');
