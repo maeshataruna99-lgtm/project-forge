@@ -14,6 +14,7 @@ Prerequisites: Node.js 22 or newer and pnpm 9.
 
 ```sh
 pnpm install
+pnpm lint
 pnpm test
 pnpm typecheck
 pnpm web:build
