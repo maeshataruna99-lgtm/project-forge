@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ProjectConfig } from '@project-forge/contracts';
+import { catalogSchema, projectConfigSchema, type ProjectConfig } from '@project-forge/contracts';
 import { catalog, validateCompatibility } from './index';
 
 const base: ProjectConfig = {
@@ -67,5 +67,55 @@ describe('first template registry', () => {
 
   it('publishes machine readable availability', () => {
     expect(catalog.blueprints.find(choice => choice.value === 'ecommerce')?.available).toBe(false);
+  });
+
+  it('covers every enum choice and boolean state in the configuration schema', () => {
+    const fields = [
+      ['profiles', projectConfigSchema.shape.project.shape.profile.options],
+      ['blueprints', projectConfigSchema.shape.project.shape.blueprint.options],
+      ['shapes', projectConfigSchema.shape.project.shape.shape.options],
+      ['layouts', projectConfigSchema.shape.repository.shape.layout.options],
+      ['packageManagers', projectConfigSchema.shape.repository.shape.packageManager.options],
+      ['taskRunners', projectConfigSchema.shape.repository.shape.taskRunner.options],
+      ['languages', projectConfigSchema.shape.stack.shape.language.options],
+      ['backends', projectConfigSchema.shape.stack.shape.backend.options],
+      ['frontends', projectConfigSchema.shape.stack.shape.frontend.options],
+      ['databases', projectConfigSchema.shape.stack.shape.database.options],
+      ['orms', projectConfigSchema.shape.stack.shape.orm.options],
+      ['companyModes', projectConfigSchema.shape.company.shape.mode.options],
+      ['superAdminScopes', projectConfigSchema.shape.company.shape.superAdminScope.options],
+      ['navigation', projectConfigSchema.shape.features.shape.navigation.options],
+      ['themes', projectConfigSchema.shape.theme.shape.preset.options],
+      ['themeModes', projectConfigSchema.shape.theme.shape.mode.options],
+    ] as const;
+    for (const [category, options] of fields) {
+      expect(catalog[category].map(choice => choice.value).sort(), category).toEqual([...options].sort());
+    }
+    for (const category of ['auth', 'rbac', 'audit', 'redis', 'docker'] as const) {
+      expect(catalog[category].map(choice => choice.value).sort(), category).toEqual(['false', 'true']);
+    }
+    expect(catalogSchema.safeParse(catalog).success).toBe(true);
+  });
+
+  it('marks a choice available exactly when compatibility accepts it', () => {
+    const fields = [
+      ['profiles', 'project', 'profile'], ['blueprints', 'project', 'blueprint'], ['shapes', 'project', 'shape'],
+      ['layouts', 'repository', 'layout'], ['packageManagers', 'repository', 'packageManager'],
+      ['taskRunners', 'repository', 'taskRunner'], ['languages', 'stack', 'language'],
+      ['backends', 'stack', 'backend'], ['frontends', 'stack', 'frontend'],
+      ['databases', 'stack', 'database'], ['orms', 'stack', 'orm'],
+      ['companyModes', 'company', 'mode'], ['superAdminScopes', 'company', 'superAdminScope'],
+      ['auth', 'features', 'auth'], ['rbac', 'features', 'rbac'], ['navigation', 'features', 'navigation'],
+      ['audit', 'features', 'audit'], ['redis', 'features', 'redis'], ['docker', 'features', 'docker'],
+      ['themes', 'theme', 'preset'],
+      ['themeModes', 'theme', 'mode'],
+    ] as const;
+    for (const [category, section, field] of fields) {
+      for (const choice of catalog[category]) {
+        const value = ['auth', 'rbac', 'audit', 'redis', 'docker'].includes(category) ? choice.value === 'true' : choice.value;
+        const candidate = { ...base, [section]: { ...base[section], [field]: value } } as ProjectConfig;
+        expect(validateCompatibility(candidate).length === 0, `${category}.${choice.value}`).toBe(choice.available);
+      }
+    }
   });
 });

@@ -46,3 +46,42 @@ export const projectConfigSchema = z.strictObject({
 });
 
 export type ProjectConfig = z.infer<typeof projectConfigSchema>;
+
+export const catalogChoiceSchema = z.strictObject({
+  value: z.string().min(1),
+  label: z.string().min(1),
+  available: z.boolean(),
+  reason: z.string().min(1).optional(),
+}).refine(choice => choice.available || choice.reason !== undefined, {
+  message: 'Unavailable choices need a reason',
+  path: ['reason'],
+});
+
+export const catalogCategorySchema = z.array(catalogChoiceSchema).min(1);
+
+export const catalogSchema = z.strictObject({
+  profiles: catalogCategorySchema,
+  blueprints: catalogCategorySchema,
+  shapes: catalogCategorySchema,
+  layouts: catalogCategorySchema,
+  languages: catalogCategorySchema,
+  backends: catalogCategorySchema,
+  frontends: catalogCategorySchema,
+  databases: catalogCategorySchema,
+  orms: catalogCategorySchema,
+  packageManagers: catalogCategorySchema,
+  taskRunners: catalogCategorySchema,
+  companyModes: catalogCategorySchema,
+  superAdminScopes: catalogCategorySchema,
+  auth: catalogCategorySchema,
+  rbac: catalogCategorySchema,
+  navigation: catalogCategorySchema,
+  audit: catalogCategorySchema,
+  redis: catalogCategorySchema,
+  docker: catalogCategorySchema,
+  themes: catalogCategorySchema,
+  themeModes: catalogCategorySchema,
+  optionalFeatures: catalogCategorySchema.optional(),
+});
+
+export type GeneratorCatalog = z.infer<typeof catalogSchema>;

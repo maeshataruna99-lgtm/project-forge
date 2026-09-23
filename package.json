@@ -4,8 +4,11 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
+    "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "web:dev": "pnpm --filter @project-forge/web dev",
+    "web:build": "pnpm --filter @project-forge/web build",
     "smoke:extract": "tsx scripts/smoke-generated.ts"
   },
   "devDependencies": {

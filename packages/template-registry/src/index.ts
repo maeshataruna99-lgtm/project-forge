@@ -1,4 +1,4 @@
-import type { ProjectConfig } from '@project-forge/contracts';
+import type { GeneratorCatalog, ProjectConfig } from '@project-forge/contracts';
 
 export type CompatibilityIssue = {
   path: string;
@@ -6,18 +6,9 @@ export type CompatibilityIssue = {
   message: string;
 };
 
-type Choice = { value: string; label: string; available: boolean; reason?: string };
-
 const later = 'This option has no generator template yet. Choose the available option.';
 
-export const catalog: {
-  blueprints: Choice[];
-  shapes: Choice[];
-  layouts: Choice[];
-  optionalFeatures: Choice[];
-  themes: Choice[];
-  profiles: Choice[];
-} = {
+export const catalog: GeneratorCatalog = {
   profiles: [
     { value: 'minimal', label: 'Minimal', available: true },
     { value: 'enterprise', label: 'Enterprise', available: false, reason: later },
@@ -35,11 +26,66 @@ export const catalog: {
     { value: 'monorepo', label: 'Monorepo', available: true },
     { value: 'single-app', label: 'Single app', available: false, reason: later },
   ],
+  languages: [{ value: 'typescript', label: 'TypeScript', available: true }],
+  backends: [
+    { value: 'nestjs', label: 'NestJS', available: true },
+    { value: 'none', label: 'No backend', available: false, reason: later },
+  ],
+  frontends: [
+    { value: 'vue-vite', label: 'Vue and Vite', available: true },
+    { value: 'none', label: 'No frontend', available: false, reason: later },
+  ],
+  databases: [
+    { value: 'postgresql', label: 'PostgreSQL', available: true },
+    { value: 'none', label: 'No database', available: false, reason: later },
+  ],
+  orms: [
+    { value: 'prisma', label: 'Prisma', available: true },
+    { value: 'none', label: 'No ORM', available: false, reason: later },
+  ],
+  packageManagers: [{ value: 'pnpm', label: 'pnpm', available: true }],
+  taskRunners: [{ value: 'none', label: 'None', available: true }],
+  companyModes: [
+    { value: 'single', label: 'Single company', available: true },
+    { value: 'multi', label: 'Multiple companies', available: false, reason: later },
+  ],
+  superAdminScopes: [
+    { value: 'company', label: 'Company', available: true },
+    { value: 'global', label: 'Global', available: false, reason: later },
+  ],
+  auth: [
+    { value: 'false', label: 'Disabled', available: true },
+    { value: 'true', label: 'Enabled', available: false, reason: later },
+  ],
+  rbac: [
+    { value: 'false', label: 'Disabled', available: true },
+    { value: 'true', label: 'Enabled', available: false, reason: later },
+  ],
+  navigation: [
+    { value: 'none', label: 'None', available: true },
+    { value: 'dynamic', label: 'Dynamic', available: false, reason: later },
+  ],
+  audit: [
+    { value: 'false', label: 'Disabled', available: true },
+    { value: 'true', label: 'Enabled', available: false, reason: later },
+  ],
+  redis: [
+    { value: 'false', label: 'Disabled', available: true },
+    { value: 'true', label: 'Enabled', available: false, reason: later },
+  ],
+  docker: [
+    { value: 'false', label: 'Disabled', available: true },
+    { value: 'true', label: 'Enabled', available: false, reason: later },
+  ],
   optionalFeatures: [
     { value: 'redis', label: 'Redis', available: false, reason: later },
     { value: 'docker', label: 'Docker', available: false, reason: later },
   ],
   themes: [{ value: 'modern-saas', label: 'Modern SaaS', available: true }],
+  themeModes: [
+    { value: 'light', label: 'Light', available: true },
+    { value: 'dark', label: 'Dark', available: true },
+  ],
 };
 
 export function validateCompatibility(config: ProjectConfig): CompatibilityIssue[] {

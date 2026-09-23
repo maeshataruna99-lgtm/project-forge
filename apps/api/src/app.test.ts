@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
+import { catalogSchema } from '@project-forge/contracts';
 import { createApp } from './app';
 
 const config = {
@@ -24,6 +25,8 @@ describe('generation API', () => {
     expect(health.body).toEqual({ status: 'ok' });
     const catalog = await request(app.getHttpServer()).get('/generator/catalog').expect(200);
     expect(catalog.body.profiles).toEqual(expect.arrayContaining([expect.objectContaining({ value: 'minimal', available: true })]));
+    expect(catalogSchema.safeParse(catalog.body).success).toBe(true);
+    expect(catalog.body.auth).toEqual(expect.arrayContaining([expect.objectContaining({ value: 'false', available: true })]));
   });
 
   it('validates and returns a representative file tree', async () => {
