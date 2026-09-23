@@ -43,15 +43,18 @@ const settings = computed(() =>
         section !== "schemaVersion" &&
         (section !== "ui" || props.config.stack.frontend === "vue-vite"),
     )
-    .flatMap(([section, values]) =>
-      Object.entries(values).map(([name, value]) => ({
+    .flatMap(([section, values]) => {
+      if (typeof values === "string") {
+        return [{ path: section, value: values }];
+      }
+      return Object.entries(values).map(([name, value]) => ({
         path: `${section}.${name}`,
         value:
           section === "ui" && name === "layout"
             ? uiLayoutLabels[value as UiLayout]
             : String(value),
-      })),
-    ),
+      }));
+    }),
 );
 const owner = ref("");
 function issueFor(path: string) {

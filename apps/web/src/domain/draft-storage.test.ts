@@ -30,7 +30,7 @@ describe('draft storage', () => {
 
     const migrated = loadDraft(localStorage);
 
-    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.schemaVersion).toBe(4);
     expect(migrated.project.name).toBe('old-project');
     expect(migrated.output.destination).toBe('zip');
     expect(migrated.dataMode).toBe('api-backed');

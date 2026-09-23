@@ -3,13 +3,14 @@ import type { ProjectConfig } from '@project-forge/contracts';
 import { downloadArchive, fetchCatalog, GeneratorApiError, validateConfig } from './generator';
 
 const config: ProjectConfig = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   project: { name: 'sample-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
   stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
   company: { mode: 'single', superAdminScope: 'company' },
   features: { auth: false, authStrategy: 'jwt-refresh', rbac: false, navigation: 'none', audit: false, redis: false, docker: false, queue: false, realtime: false, apiDocs: false, smtp: false, uploads: false, generatedTests: false, logging: false, ciCd: false, rateLimit: false },
   dataMode: 'api-backed', deploymentProfile: 'local', output: { destination: 'zip' },
+  ui: { layout: 'single-column' },
   theme: { preset: 'modern-saas', palette: 'blue', mode: 'light', primary: '#2563EB', accent: '#F59E0B', radius: 'medium', shadow: 'subtle', density: 'comfortable' },
 };
 
@@ -18,7 +19,7 @@ const categories = [
   'databases', 'orms', 'packageManagers', 'taskRunners', 'companyModes',
   'superAdminScopes', 'auth', 'authStrategies', 'rbac', 'navigation', 'audit', 'redis', 'docker',
   'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
-  'dataModes', 'deploymentProfiles', 'outputDestinations', 'themes', 'palettes', 'themeModes',
+  'dataModes', 'deploymentProfiles', 'outputDestinations', 'uiLayouts', 'themes', 'palettes', 'themeModes',
   'themeRadii', 'themeShadows', 'themeDensities',
 ] as const;
 const catalog = Object.fromEntries(categories.map(key => [key, [{ value: 'minimal', label: 'Minimal', available: true }]]));
@@ -35,7 +36,24 @@ describe('generator HTTP client', () => {
   });
 
   it('posts configuration JSON and parses the validation plan', async () => {
-    const plan = { projectName: 'sample-app', profile: 'minimal', files: ['apps/web/src/App.vue'], theme: { mode: 'light', primary: '#2563EB', accent: '#F59E0B' } };
+    const plan = {
+      templatePack: 'typescript-nest-vue',
+      projectName: 'sample-app',
+      profile: 'minimal',
+      blueprint: 'blank-fullstack',
+      shape: 'fullstack',
+      layout: 'monorepo',
+      capabilities: [],
+      features: config.features,
+      stack: config.stack,
+      company: config.company,
+      dataMode: config.dataMode,
+      deploymentProfile: config.deploymentProfile,
+      outputDestination: config.output.destination,
+      uiLayout: config.ui.layout,
+      files: ['apps/web/src/App.vue'],
+      theme: config.theme,
+    };
     const fetch = vi.fn().mockResolvedValue(Response.json(plan));
     vi.stubGlobal('fetch', fetch);
     expect(await validateConfig(config)).toEqual(plan);

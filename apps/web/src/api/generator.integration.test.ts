@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import App from '../App.vue';
+import { createDefaultConfig } from '../domain/default-config';
 import { catalog } from '../../../../packages/template-registry/src/index';
+import { createPlan } from '../../../../packages/generator-core/src/plan';
 
-const plan = { projectName: 'sample-app', profile: 'minimal', files: ['apps/web/src/App.vue', 'packages/contracts/src/index.ts'], theme: { mode: 'light', primary: '#2563EB', accent: '#F59E0B' } };
+const plan = createPlan(createDefaultConfig());
 const tick = async () => { await new Promise(resolve => setTimeout(resolve, 0)); await nextTick(); };
 
 async function setup(fetchMock: ReturnType<typeof vi.fn>) {
@@ -17,7 +19,7 @@ async function setup(fetchMock: ReturnType<typeof vi.fn>) {
 }
 
 async function review(wrapper: Awaited<ReturnType<typeof setup>>) {
-  for (let i = 0; i < 4; i++) await wrapper.get('button[type="submit"]').trigger('click');
+  for (let i = 0; i < 5; i++) await wrapper.get('button[type="submit"]').trigger('click');
   await tick();
 }
 
@@ -27,7 +29,7 @@ describe('catalog to validated ZIP journey', () => {
   it('updates the live theme preview when colors and mode change', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json(catalog));
     const wrapper = await setup(fetchMock);
-    for (let i = 0; i < 3; i++) await wrapper.get('button[type="submit"]').trigger('click');
+    for (let i = 0; i < 4; i++) await wrapper.get('button[type="submit"]').trigger('click');
     await wrapper.get('select#themeMode').setValue('dark');
     await wrapper.get('input#primary').setValue('#123456');
     const preview = wrapper.get('[data-testid="theme-preview"]');

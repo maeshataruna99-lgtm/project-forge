@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { catalogSchema, projectConfigSchema } from './index';
 
 const validConfig = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   project: { name: 'commerce-app', blueprint: 'ecommerce', shape: 'fullstack', profile: 'enterprise' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'turborepo' },
   stack: {
@@ -21,6 +21,7 @@ const validConfig = {
   dataMode: 'api-backed',
   deploymentProfile: 'vps',
   output: { destination: 'github' },
+  ui: { layout: 'single-column' },
   theme: {
     preset: 'pos', palette: 'emerald', mode: 'dark', primary: '#2563EB', accent: '#F59E0B',
     radius: 'large', shadow: 'subtle', density: 'compact',
@@ -82,7 +83,7 @@ describe('catalogSchema', () => {
       'databases', 'orms', 'packageManagers', 'taskRunners', 'companyModes',
       'superAdminScopes', 'auth', 'authStrategies', 'rbac', 'navigation', 'audit', 'redis', 'docker',
       'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit',
-      'dataModes', 'deploymentProfiles', 'outputDestinations', 'themes', 'palettes', 'themeModes',
+      'dataModes', 'deploymentProfiles', 'outputDestinations', 'uiLayouts', 'themes', 'palettes', 'themeModes',
       'themeRadii', 'themeShadows', 'themeDensities',
     ];
     const complete = Object.fromEntries(categories.map(key => [key, [{ value: 'sample', label: 'Sample', available: true }]]));

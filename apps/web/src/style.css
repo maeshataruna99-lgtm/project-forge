@@ -144,8 +144,181 @@ h2 {
   background: #fff;
   color: #17233b;
 }
-.field input[type="color"] {
-  padding: 0.25rem;
+.color-picker {
+  position: relative;
+}
+.color-picker-control {
+  display: grid;
+  grid-template-columns: 2.8rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+.color-picker-trigger {
+  display: grid;
+  place-items: center;
+  min-width: 2.8rem;
+  min-height: 2.8rem;
+  padding: 0.3rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.55rem;
+  background: #fff;
+  cursor: pointer;
+}
+.color-picker-trigger__swatch {
+  width: 100%;
+  height: 100%;
+  min-height: 2rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 0.32rem;
+}
+.color-picker-hex {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-transform: uppercase;
+}
+.color-picker-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  display: grid;
+  gap: 0.7rem;
+  width: min(22rem, calc(100vw - 3rem));
+  padding: 0.9rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 0.8rem;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(16, 24, 40, 0.18);
+}
+.color-picker--align-end .color-picker-panel {
+  right: 0;
+  left: auto;
+}
+.color-picker-area {
+  position: relative;
+  height: 9.5rem;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  cursor: crosshair;
+  touch-action: none;
+}
+.color-picker-area__white,
+.color-picker-area__black {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.color-picker-area__white {
+  background: linear-gradient(to right, #fff, transparent);
+}
+.color-picker-area__black {
+  background: linear-gradient(to top, #000, transparent);
+}
+.color-picker-area__thumb {
+  position: absolute;
+  z-index: 1;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.6), 0 1px 3px rgba(16, 24, 40, 0.2);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.color-picker-panel > label,
+.color-picker-adjustments label,
+.color-picker-swatches > span {
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+.color-picker-panel input[type="range"] {
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+.color-picker-panel input.color-picker-hue {
+  appearance: none;
+}
+.color-picker-hue::-webkit-slider-runnable-track {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.color-picker-hue::-moz-range-track {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.color-picker-hue::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: -0.23rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #344054;
+  box-shadow: 0 0 0 1px #344054;
+}
+.color-picker-hue::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #344054;
+  box-shadow: 0 0 0 1px #344054;
+}
+.color-picker-panel input[type="range"]:focus-visible,
+.color-picker-trigger:focus-visible,
+.color-picker-swatch:focus-visible,
+.color-picker-eyedropper:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+.color-picker-adjustments {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+}
+.color-picker-adjustments input {
+  grid-column: 1 / -1;
+}
+.color-picker-adjustments output {
+  color: #475467;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.color-picker-swatches {
+  display: grid;
+  gap: 0.5rem;
+}
+.color-picker-swatches > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.color-picker-swatch {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 0.45rem;
+  cursor: pointer;
+}
+.color-picker-swatch[aria-pressed="true"] {
+  outline: 2px solid #344054;
+  outline-offset: 2px;
+}
+.color-picker-eyedropper {
+  min-height: 2.75rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #344054;
+  font-weight: 650;
+  cursor: pointer;
 }
 .field-help,
 .choice-reasons {

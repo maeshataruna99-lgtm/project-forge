@@ -5,13 +5,14 @@ import { hashPassword, verifyPassword, signToken, verifyToken } from '../../../t
 import { resolveCompanyWhere, scopeQuery } from '../../../templates/typescript-nest-vue/fragments/company/scope';
 
 const config = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   project: { name: 'sample-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
   stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
   company: { mode: 'single', superAdminScope: 'company' },
   features: { auth: false, authStrategy: 'jwt-refresh', rbac: false, navigation: 'none', audit: false, redis: false, docker: false, queue: false, realtime: false, apiDocs: false, smtp: false, uploads: false, generatedTests: false, logging: false, ciCd: false, rateLimit: false },
   dataMode: 'api-backed', deploymentProfile: 'local', output: { destination: 'zip' },
+  ui: { layout: 'single-column' },
   theme: { preset: 'modern-saas', palette: 'blue', mode: 'light', primary: '#2563EB', accent: '#F59E0B', radius: 'medium', shadow: 'subtle', density: 'comfortable' },
 };
 
@@ -292,7 +293,7 @@ describe('generator core', () => {
     expect(strFromU8(files['sample-app/apps/api/src/products/products.controller.ts']!)).toContain("@RequirePermission('products:read')");
     expect(strFromU8(files['sample-app/apps/api/src/rbac/permissions.ts']!)).toContain("'products:read'");
     expect(strFromU8(files['sample-app/apps/api/src/rbac/seed-access-control.mjs']!)).toContain("'/products'");
-    expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain("fetch('/api/products')");
+    expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain('fetch("/api/products")');
     expect(strFromU8(files['sample-app/README.md']!)).toContain('not a checkout, payment, inventory, or order system');
   });
 

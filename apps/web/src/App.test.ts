@@ -4,6 +4,8 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import App from './App.vue';
 import ProjectStep from './steps/ProjectStep.vue';
+import { createDefaultConfig } from './domain/default-config';
+import { createPlan } from '../../../packages/generator-core/src/plan';
 
 const reason = 'No generator template yet';
 const available = (value: string, label: string) => ({ value, label, available: true });
@@ -40,6 +42,7 @@ const catalog = {
   dataModes: [available('api-backed', 'API-backed'), available('demo', 'Demo data')],
   deploymentProfiles: ['local', 'docker', 'vercel', 'vps'].map(value => available(value, value)),
   outputDestinations: [available('zip', 'Download ZIP'), available('github', 'Push to GitHub')],
+  uiLayouts: ['single-column', 'two-column', 'grid', 'split-screen', 'magazine', 'hero-landing'].map(value => available(value, value)),
   themes: ['modern-saas', 'ecommerce-store', 'admin-dashboard', 'pos', 'warehouse-industrial', 'soft-pastel', 'dark-developer', 'corporate'].map(value => available(value, value)),
   palettes: ['blue', 'emerald', 'purple', 'amber', 'rose', 'custom'].map(value => available(value, value)),
   themeModes: [available('light', 'Light'), available('dark', 'Dark')],
@@ -100,10 +103,10 @@ describe('configuration wizard', () => {
     expect((reopened.get('input[name="projectName"]').element as HTMLInputElement).value).toBe('sample-app');
   });
 
-  it('shows five named steps and advances and returns with keyboard-operable buttons', async () => {
+  it('shows six named steps and advances and returns with keyboard-operable buttons', async () => {
     const wrapper = await setup();
     const names = wrapper.findAll('nav[aria-label="Wizard steps"] li button span:last-child').map(item => item.text());
-    expect(names).toEqual(['Project', 'Stack', 'Organization and features', 'Theme', 'Review and generate']);
+    expect(names).toEqual(['Project', 'Stack', 'UI Layout', 'Organization and features', 'Theme', 'Review and generate']);
     expect(wrapper.find('h2').text()).toBe('Project');
     await wrapper.get('button[type="submit"]').trigger('click');
     expect(wrapper.find('h2').text()).toBe('Stack');
@@ -146,10 +149,13 @@ describe('configuration wizard', () => {
 
   it('lets a keyboard user traverse every step and change an available theme choice', async () => {
     const wrapper = await setup();
-    for (const heading of ['Stack', 'Organization and features', 'Theme', 'Review and generate']) {
+    for (const heading of ['Stack', 'UI Layout', 'Organization and features', 'Theme', 'Review and generate']) {
       await wrapper.get('button[type="submit"]').trigger('click');
       expect(wrapper.find('h2').text()).toBe(heading);
     }
+    expect(wrapper.get('[data-config-path="dataMode"] dd').text()).toBe('api-backed');
+    expect(wrapper.get('[data-config-path="deploymentProfile"] dd').text()).toBe('local');
+    expect(wrapper.find('[data-config-path="dataMode.0"]').exists()).toBe(false);
     await wrapper.get('button[aria-label="Back to Theme"]').trigger('click');
     const mode = wrapper.get('select#themeMode');
     await mode.setValue('dark');
@@ -163,15 +169,15 @@ describe('configuration wizard', () => {
     await wrapper.get('#themePreset').setValue('ecommerce-store');
     expect((wrapper.get('#themePreset').element as HTMLSelectElement).value).toBe('ecommerce-store');
     expect(wrapper.get('[data-testid="theme-preview"]').attributes('data-preset')).toBe('ecommerce-store');
-    expect((wrapper.get('#primary').element as HTMLInputElement).value).toBe('#fb923c');
+    expect((wrapper.get('#primary').element as HTMLInputElement).value).toBe('#FB923C');
   });
 
   it('offers GitHub output as an explicit public repository choice and keeps ZIP available', async () => {
     const wrapper = await setup();
-    const plan = { projectName: 'sample-app', profile: 'minimal', files: [], theme: { mode: 'light', primary: '#2563EB', accent: '#F59E0B' } };
+    const plan = createPlan(createDefaultConfig());
     const fetchMock = vi.fn().mockResolvedValue(Response.json(plan));
     vi.stubGlobal('fetch', fetchMock);
-    for (const heading of ['Stack', 'Organization and features', 'Theme', 'Review and generate']) {
+    for (const heading of ['Stack', 'UI Layout', 'Organization and features', 'Theme', 'Review and generate']) {
       await wrapper.get('button[type="submit"]').trigger('click');
       expect(wrapper.find('h2').text()).toBe(heading);
     }
@@ -182,13 +188,15 @@ describe('configuration wizard', () => {
     expect(wrapper.find('button[aria-label="Download ZIP archive"]').exists()).toBe(true);
     expect(wrapper.text()).toContain('Create a public GitHub repository too');
     expect(fetchMock.mock.calls.some(call => String(call[0]) === '/generator/validate' && String(call[1]?.body).includes('"destination":"github"'))).toBe(true);
-    expect(localStorage.getItem('project-forge:draft:v3')).not.toContain('authorizationId');
+    expect(localStorage.getItem('project-forge:draft:v4')).not.toContain('authorizationId');
   });
 
   it('exposes the supported data, deployment, and optional integration controls', async () => {
     const wrapper = await setup();
     await wrapper.get('button[type="submit"]').trigger('click');
     for (const id of ['deploymentProfile', 'dataMode']) expect(wrapper.find(`#${id}`).exists()).toBe(true);
+    await wrapper.get('button[type="submit"]').trigger('click');
+    expect(wrapper.find('input[type="radio"]').exists()).toBe(true);
     await wrapper.get('button[type="submit"]').trigger('click');
     for (const id of ['redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit']) {
       expect(wrapper.find(`#${id}`).exists(), id).toBe(true);

@@ -3,7 +3,7 @@ import { catalogSchema, projectConfigSchema, type ProjectConfig } from '@project
 import { catalog, validateCompatibility } from './index';
 
 const base: ProjectConfig = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   project: { name: 'my-app', blueprint: 'blank-fullstack', shape: 'fullstack', profile: 'minimal' },
   repository: { layout: 'monorepo', packageManager: 'pnpm', taskRunner: 'none' },
   stack: { language: 'typescript', backend: 'nestjs', frontend: 'vue-vite', database: 'postgresql', orm: 'prisma' },
@@ -16,6 +16,7 @@ const base: ProjectConfig = {
   dataMode: 'api-backed',
   deploymentProfile: 'local',
   output: { destination: 'zip' },
+  ui: { layout: 'single-column' },
   theme: {
     preset: 'modern-saas', palette: 'blue', mode: 'light', primary: '#2563EB', accent: '#F59E0B',
     radius: 'medium', shadow: 'subtle', density: 'comfortable',

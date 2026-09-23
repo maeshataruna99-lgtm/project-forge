@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import type { GeneratorCatalog, ProjectConfig } from '@project-forge/contracts';
 import { contrastRatio, describeContrast, getPaletteColors, getPresetColors, resolveThemeTokens } from '@project-forge/contracts';
 import ChoiceField from '../components/ChoiceField.vue';
+import ColorPicker from '../components/ColorPicker.vue';
 import ThemePreview from '../components/ThemePreview.vue';
 const props = defineProps<{ config: ProjectConfig; catalog: GeneratorCatalog }>();
 const emit = defineEmits<{ change: [path: string, value: string] }>();
@@ -27,6 +28,10 @@ function changeMode(value: string) {
   emit('change', 'theme.primary', colors.primary);
   emit('change', 'theme.accent', colors.accent);
 }
+function changeCustomColor(name: 'primary' | 'accent', value: string) {
+  if (props.config.theme.palette !== 'custom') emit('change', 'theme.palette', 'custom');
+  emit('change', `theme.${name}`, value);
+}
 const resolvedTheme = computed(() => resolveThemeTokens(props.config.theme));
 const primaryContrast = computed(() => contrastRatio(props.config.theme.primary, resolvedTheme.value.background));
 const accentContrast = computed(() => contrastRatio(props.config.theme.accent, resolvedTheme.value.background));
@@ -43,8 +48,8 @@ const accentContrast = computed(() => contrastRatio(props.config.theme.accent, r
       <ChoiceField id="themeRadius" label="Border radius" :model-value="config.theme.radius" :choices="catalog.themeRadii" @update:model-value="emit('change', 'theme.radius', $event)" />
       <ChoiceField id="themeShadow" label="Shadow" :model-value="config.theme.shadow" :choices="catalog.themeShadows" @update:model-value="emit('change', 'theme.shadow', $event)" />
       <ChoiceField id="themeDensity" label="Density" :model-value="config.theme.density" :choices="catalog.themeDensities" @update:model-value="emit('change', 'theme.density', $event)" />
-      <div class="field"><label for="primary">Primary color</label><input id="primary" type="color" :value="config.theme.primary" @input="emit('change', 'theme.primary', ($event.target as HTMLInputElement).value)" /></div>
-      <div class="field"><label for="accent">Accent color</label><input id="accent" type="color" :value="config.theme.accent" @input="emit('change', 'theme.accent', ($event.target as HTMLInputElement).value)" /></div>
+      <ColorPicker id="primary" label="Primary color" :model-value="config.theme.primary" @update:model-value="changeCustomColor('primary', $event)" />
+      <ColorPicker id="accent" label="Accent color" :model-value="config.theme.accent" align-end @update:model-value="changeCustomColor('accent', $event)" />
     </div>
     <ul class="contrast-feedback" aria-label="Theme contrast feedback">
       <li :class="{ 'contrast-feedback--low': primaryContrast < 4.5 }">Primary: {{ describeContrast(primaryContrast) }}</li>
