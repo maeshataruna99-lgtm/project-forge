@@ -4,7 +4,7 @@ Project Forge is a browser-based starter project generator under development. Th
 
 ## Current foundation
 
-This repository currently contains the versioned configuration schema and the first template compatibility registry. The schema validates names, enum choices, feature flags, and theme colors. The registry explains unsupported choices with machine-readable codes. There is no running web application, generation API, or downloadable starter archive yet.
+This repository contains the versioned configuration schema, compatibility registry, NestJS generation API, and one downloadable Blank Fullstack starter template. The first ZIP requires an explicit minimal profile. The web wizard and enterprise template features are future increments.
 
 The linked upstream fullstack developer agent is copied verbatim to [`.claude/agents/fullstack-developer.md`](.claude/agents/fullstack-developer.md). Its React/Drizzle defaults describe that external agent; the Project Forge design specification sets this project's NestJS/Vue/Prisma stack.
 
@@ -18,10 +18,14 @@ pnpm test
 pnpm typecheck
 ```
 
+Start the generator API with `pnpm --filter @project-forge/api dev`. It serves `GET /health`, `GET /generator/catalog`, `POST /generator/validate`, and `POST /generator/archive` on port 3000. Send [the example configuration](examples/minimal-config.json) as JSON to either POST endpoint. Archive returns `sample-app.zip`.
+
+To unpack a sample archive into a temporary directory for verification, run `pnpm smoke:extract` and use the printed path. The generated README lists its own setup, build, test, and migration commands.
+
 ## Delivery sequence
 
-1. Foundation: workspace, contracts, and compatibility registry (current increment).
-2. First generation slice: API validation and archive endpoints, safe file planning/ZIP packaging, and a runnable blank fullstack starter.
+1. Foundation: workspace, contracts, and compatibility registry (complete).
+2. First generation slice: API validation and archive endpoints, safe file planning/ZIP packaging, and a runnable blank fullstack starter (current increment).
 3. Wizard and live theme preview wired to the shared catalog.
 4. Generated application foundation: authentication, RBAC, dynamic navigation, company scoping, audit, and idempotent seeds.
 

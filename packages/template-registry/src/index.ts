@@ -2,7 +2,7 @@ import type { ProjectConfig } from '@project-forge/contracts';
 
 export type CompatibilityIssue = {
   path: string;
-  code: 'TEMPLATE_UNAVAILABLE' | 'FEATURE_UNAVAILABLE' | 'FEATURE_DEPENDENCY';
+  code: 'INVALID_INPUT' | 'TEMPLATE_UNAVAILABLE' | 'FEATURE_UNAVAILABLE' | 'FEATURE_DEPENDENCY';
   message: string;
 };
 
@@ -16,7 +16,12 @@ export const catalog: {
   layouts: Choice[];
   optionalFeatures: Choice[];
   themes: Choice[];
+  profiles: Choice[];
 } = {
+  profiles: [
+    { value: 'minimal', label: 'Minimal', available: true },
+    { value: 'enterprise', label: 'Enterprise', available: false, reason: later },
+  ],
   blueprints: [
     { value: 'blank-fullstack', label: 'Blank Fullstack', available: true },
     { value: 'ecommerce', label: 'E-commerce', available: false, reason: later },
@@ -45,7 +50,10 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
 
   if (config.project.blueprint !== 'blank-fullstack') unavailable('project.blueprint', config.project.blueprint);
   if (config.project.shape !== 'fullstack') unavailable('project.shape', config.project.shape);
+  if (config.project.profile !== 'minimal') unavailable('project.profile', config.project.profile);
   if (config.repository.layout !== 'monorepo') unavailable('repository.layout', config.repository.layout);
+  if (config.company.mode !== 'single') unavailable('company.mode', config.company.mode);
+  if (config.company.superAdminScope !== 'company') unavailable('company.superAdminScope', config.company.superAdminScope);
 
   const supportedStack = {
     language: 'typescript',
@@ -67,10 +75,13 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   if (config.features.audit && !config.features.auth) {
     issues.push({ path: 'features.audit', code: 'FEATURE_DEPENDENCY', message: 'User audit events require authentication. Enable auth or disable audit.' });
   }
-  for (const feature of ['redis', 'docker'] as const) {
+  for (const feature of ['auth', 'rbac', 'audit', 'redis', 'docker'] as const) {
     if (config.features[feature]) {
       issues.push({ path: `features.${feature}`, code: 'FEATURE_UNAVAILABLE', message: `${feature}: ${later}` });
     }
+  }
+  if (config.features.navigation === 'dynamic') {
+    issues.push({ path: 'features.navigation', code: 'FEATURE_UNAVAILABLE', message: `dynamic navigation: ${later}` });
   }
 
   return issues;

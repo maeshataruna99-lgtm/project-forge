@@ -1,14 +1,17 @@
 import { z } from 'zod';
 
-const projectName = z.string().min(2).max(50).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers, and single hyphens');
+const projectName = z.string().min(2).max(50)
+  .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers, and single hyphens')
+  .refine(name => !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(name), 'Use a name that is not reserved by Windows');
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex color');
 
 export const projectConfigSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   project: z.strictObject({
     name: projectName,
     blueprint: z.enum(['blank-fullstack', 'ecommerce']),
     shape: z.enum(['api-only', 'frontend-only', 'fullstack']),
+    profile: z.enum(['minimal', 'enterprise']),
   }),
   repository: z.strictObject({
     layout: z.enum(['monorepo', 'single-app']),
