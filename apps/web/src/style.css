@@ -63,5 +63,13 @@ h2 { font-size: 1.65rem; letter-spacing: -.025em; margin: 0; }
 .file-tree li { padding: .2rem 0; overflow-wrap: anywhere; }
 .review-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
 .review-actions button { border-radius: .6rem; padding: .65rem 1rem; font-weight: 700; cursor: pointer; }
+.github-output { display: grid; gap: .8rem; margin-top: 1.5rem; padding: 1rem; border: 1px solid #cbd5e1; border-radius: .75rem; }
+.github-output legend { padding: 0 .4rem; font-weight: 700; }
+.github-output > p { margin: 0; color: #53627a; font-size: .9rem; }
+.github-output > label, .github-create label { font-weight: 650; }
+.github-device-code strong { display: inline-block; padding: .5rem .8rem; border: 1px dashed #64748b; border-radius: .4rem; font: 700 1.25rem ui-monospace, monospace; letter-spacing: .12em; }
+.github-create { display: grid; gap: .6rem; }
+.github-create input { min-height: 2.8rem; max-width: 28rem; border: 1px solid #94a3b8; border-radius: .55rem; padding: .5rem .7rem; }
+.github-create p { margin: 0; color: #53627a; }
 @media (max-width: 650px) { .field-grid { grid-template-columns: 1fr; } .stepper ol { min-width: 570px; } }
 @media (max-width: 650px) { .review-summary { grid-template-columns: 1fr; } }

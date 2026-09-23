@@ -69,6 +69,30 @@ describe('generation API', () => {
     expect(result.body.subarray(0, 2).toString()).toBe('PK');
   });
 
+  it('requires valid GitHub destination details and an opaque authorization session', async () => {
+    const result = await request(app.getHttpServer()).post('/generator/github').send({ confirmed: true }).expect(400);
+    expect(result.body.code).toBe('INVALID_GITHUB_OUTPUT_REQUEST');
+    expect(JSON.stringify(result.body)).not.toMatch(/token|device_code/i);
+  });
+
+  it('does not perform a repository operation when the user cancels', async () => {
+    const result = await request(app.getHttpServer()).post('/generator/github').send({
+      confirmed: false,
+      authorizationId: '00000000-0000-4000-8000-000000000001',
+      owner: 'cinder',
+      name: 'sample-app',
+      visibility: 'public',
+      config: { ...config, output: { destination: 'github' } },
+    }).expect(201);
+    expect(result.body).toEqual({ status: 'cancelled' });
+  });
+
+  it('returns a safe configuration response when GitHub device authorization is not configured', async () => {
+    const result = await request(app.getHttpServer()).post('/generator/github/device').expect(503);
+    expect(result.body.code).toBe('GITHUB_NOT_CONFIGURED');
+    expect(JSON.stringify(result.body)).not.toMatch(/client_id|device_code|token/i);
+  });
+
   it('rejects oversized JSON requests', async () => {
     const result = await request(app.getHttpServer()).post('/generator/validate').send({ padding: 'x'.repeat(20_000) }).expect(413);
     expect(result.body.code).toBe('REQUEST_TOO_LARGE');

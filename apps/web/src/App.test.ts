@@ -39,7 +39,7 @@ const catalog = {
   rateLimit: [available('false', 'Disabled'), available('true', 'Enabled')],
   dataModes: [available('api-backed', 'API-backed'), available('demo', 'Demo data')],
   deploymentProfiles: ['local', 'docker', 'vercel', 'vps'].map(value => available(value, value)),
-  outputDestinations: [available('zip', 'Download ZIP'), unavailable('github', 'Push to GitHub')],
+  outputDestinations: [available('zip', 'Download ZIP'), available('github', 'Push to GitHub')],
   themes: ['modern-saas', 'ecommerce-store', 'admin-dashboard', 'pos', 'warehouse-industrial', 'soft-pastel', 'dark-developer', 'corporate'].map(value => available(value, value)),
   palettes: ['blue', 'emerald', 'purple', 'amber', 'rose', 'custom'].map(value => available(value, value)),
   themeModes: [available('light', 'Light'), available('dark', 'Dark')],
@@ -164,6 +164,25 @@ describe('configuration wizard', () => {
     expect((wrapper.get('#themePreset').element as HTMLSelectElement).value).toBe('ecommerce-store');
     expect(wrapper.get('[data-testid="theme-preview"]').attributes('data-preset')).toBe('ecommerce-store');
     expect((wrapper.get('#primary').element as HTMLInputElement).value).toBe('#fb923c');
+  });
+
+  it('offers GitHub output as an explicit public repository choice and keeps ZIP available', async () => {
+    const wrapper = await setup();
+    const plan = { projectName: 'sample-app', profile: 'minimal', files: [], theme: { mode: 'light', primary: '#2563EB', accent: '#F59E0B' } };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(plan));
+    vi.stubGlobal('fetch', fetchMock);
+    for (const heading of ['Stack', 'Organization and features', 'Theme', 'Review and generate']) {
+      await wrapper.get('button[type="submit"]').trigger('click');
+      expect(wrapper.find('h2').text()).toBe(heading);
+    }
+    await nextTick();
+    const github = wrapper.get('input[type="checkbox"]');
+    await github.setValue(true);
+    await nextTick();
+    expect(wrapper.find('button[aria-label="Download ZIP archive"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Create a public GitHub repository too');
+    expect(fetchMock.mock.calls.some(call => String(call[0]) === '/generator/validate' && String(call[1]?.body).includes('"destination":"github"'))).toBe(true);
+    expect(localStorage.getItem('project-forge:draft:v3')).not.toContain('authorizationId');
   });
 
   it('exposes the supported data, deployment, and optional integration controls', async () => {

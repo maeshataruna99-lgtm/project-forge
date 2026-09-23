@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref, watch } from 'vue';
 import { projectConfigSchema, type GeneratorCatalog } from '@project-forge/contracts';
 import { downloadArchive, fetchCatalog, GeneratorApiError, type GenerationPlan, validateConfig } from './api/generator';
+import { createGitHubRepository, pollGitHubAuthorization, startGitHubAuthorization, type GitHubAuthorization } from './api/repository-output';
 import { resolveBrowserStorage } from './domain/draft-storage';
 import { createWizardState } from './domain/wizard-state';
 import WizardStepper from './components/WizardStepper.vue';
@@ -24,6 +25,11 @@ const validationError = ref<GeneratorApiError>();
 const archiveError = ref<GeneratorApiError>();
 const validating = ref(false);
 const archiveState = ref<'idle' | 'downloading' | 'error' | 'complete'>('idle');
+const githubState = ref<'idle' | 'authorizing' | 'awaiting' | 'authorized' | 'uploading' | 'complete' | 'error'>('idle');
+const githubAuthorization = ref<GitHubAuthorization>();
+const githubMessage = ref('');
+const githubRepositoryUrl = ref('');
+let githubPollTimer: ReturnType<typeof setTimeout> | undefined;
 let validationRevision = 0;
 let archiveRevision = 0;
 let validatedConfig = '';
@@ -124,10 +130,110 @@ function next() {
 }
 function resetDraft() {
   if (!window.confirm('Discard your saved draft and start again?')) return;
+  cancelGithubAuthorization();
   wizard.reset();
   invalidateValidation();
   projectNameDraft.value = config.value.project.name;
   nameError.value = '';
+}
+
+function clearGithubAuthorization() {
+  if (githubPollTimer) clearTimeout(githubPollTimer);
+  githubPollTimer = undefined;
+  githubAuthorization.value = undefined;
+}
+
+function toggleGithub(enabled: boolean) {
+  clearGithubAuthorization();
+  githubState.value = 'idle';
+  githubMessage.value = '';
+  githubRepositoryUrl.value = '';
+  update('output.destination', enabled ? 'github' : 'zip');
+  if (current.value === 4) void validate();
+}
+
+async function authorizeGithub() {
+  if (!plan.value || validating.value || githubState.value === 'authorizing') return;
+  clearGithubAuthorization();
+  githubState.value = 'authorizing';
+  githubMessage.value = '';
+  try {
+    const authorization = await startGitHubAuthorization();
+    githubAuthorization.value = authorization;
+    githubState.value = 'awaiting';
+    const expiresAt = Date.now() + authorization.expiresIn * 1000;
+    const poll = async () => {
+      if (githubState.value !== 'awaiting' || githubAuthorization.value !== authorization) return;
+      if (Date.now() >= expiresAt) {
+        githubState.value = 'error';
+        githubMessage.value = 'GitHub authorization expired. Start again or download the ZIP.';
+        clearGithubAuthorization();
+        return;
+      }
+      try {
+        const result = await pollGitHubAuthorization(authorization.authorizationId);
+        if (githubState.value !== 'awaiting' || githubAuthorization.value !== authorization) return;
+        if (result.status === 'authorized') {
+          githubState.value = 'authorized';
+          return;
+        }
+        if (result.status === 'expired') {
+          githubState.value = 'error';
+          githubMessage.value = 'GitHub authorization expired. Start again or download the ZIP.';
+          clearGithubAuthorization();
+          return;
+        }
+        githubPollTimer = setTimeout(poll, result.interval * 1000);
+      } catch (error) {
+        githubState.value = 'error';
+        githubMessage.value = error instanceof Error ? error.message : 'GitHub authorization failed.';
+        clearGithubAuthorization();
+      }
+    };
+    githubPollTimer = setTimeout(poll, authorization.interval * 1000);
+  } catch (error) {
+    githubState.value = 'error';
+    githubMessage.value = error instanceof Error ? error.message : 'GitHub authorization is unavailable.';
+  }
+}
+
+function cancelGithubAuthorization() {
+  clearGithubAuthorization();
+  githubState.value = 'idle';
+  githubMessage.value = '';
+}
+
+async function createGithub(owner: string) {
+  const authorization = githubAuthorization.value;
+  if (!authorization || !plan.value || githubState.value !== 'authorized' || !window.confirm(`Create the public GitHub repository ${owner}/${config.value.project.name} and push the generated files?`)) return;
+  githubState.value = 'uploading';
+  githubMessage.value = '';
+  githubRepositoryUrl.value = '';
+  try {
+    const result = await createGitHubRepository({
+      authorizationId: authorization.authorizationId,
+      owner,
+      name: config.value.project.name,
+      confirmed: true,
+      config: config.value,
+    });
+    clearGithubAuthorization();
+    if (result.status === 'completed') {
+      githubRepositoryUrl.value = result.repositoryUrl;
+      githubState.value = 'complete';
+    } else if (result.status === 'push-failed') {
+      githubRepositoryUrl.value = result.repositoryUrl;
+      githubMessage.value = result.message;
+      githubState.value = 'error';
+    } else {
+      githubMessage.value = 'GitHub could not finish this operation. Download the ZIP to continue.';
+      githubState.value = 'error';
+    }
+  } catch (error) {
+    clearGithubAuthorization();
+    githubState.value = 'error';
+    githubMessage.value = error instanceof Error ? error.message : 'GitHub could not finish this operation.';
+  }
 }
 </script>
 
@@ -148,7 +254,7 @@ function resetDraft() {
         <StackStep v-else-if="current === 1" :config="config" :catalog="catalog" @change="update" />
         <OrganizationStep v-else-if="current === 2" :config="config" :catalog="catalog" @change="update" />
         <ThemeStep v-else-if="current === 3" :config="config" :catalog="catalog" @change="update" />
-        <ReviewStep v-else :config="config" :plan="plan" :validation-error="validationError" :archive-error="archiveError" :validating="validating" :archive-state="archiveState" @validate="validate" @download="archive" />
+        <ReviewStep v-else :config="config" :plan="plan" :validation-error="validationError" :archive-error="archiveError" :validating="validating" :archive-state="archiveState" :github-state="githubState" :github-authorization="githubAuthorization" :github-message="githubMessage" :github-repository-url="githubRepositoryUrl" @validate="validate" @download="archive" @github-toggle="toggleGithub" @github-authorize="authorizeGithub" @github-create="createGithub" @github-cancel="cancelGithubAuthorization" />
         <div class="wizard-actions">
           <button v-if="current > 0" type="button" class="button-secondary" :aria-label="`Back to ${steps[current - 1]}`" @click="back">Back</button>
           <span v-else></span>
