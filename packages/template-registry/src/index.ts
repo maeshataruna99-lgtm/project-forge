@@ -1,4 +1,5 @@
 import type { GeneratorCatalog, ProjectConfig } from '@project-forge/contracts';
+import { themePresets } from '@project-forge/contracts';
 
 export type CompatibilityIssue = {
   path: string;
@@ -24,7 +25,9 @@ const booleans = (enabled = false, requirements: Array<{ path: string; equals: s
 
 export const catalog: GeneratorCatalog = {
   profiles: choices([['minimal', 'Minimal'], ['enterprise', 'Enterprise']], ['minimal', 'enterprise']),
-  blueprints: choices([['blank-fullstack', 'Blank Fullstack'], ['ecommerce', 'E-commerce']], ['blank-fullstack']),
+  blueprints: choices([['blank-fullstack', 'Blank Fullstack'], ['ecommerce', 'E-commerce']], ['blank-fullstack', 'ecommerce'], {
+    ecommerce: [{ path: 'project.shape', equals: 'fullstack' }, { path: 'repository.layout', equals: 'monorepo' }],
+  }),
   shapes: choices([['fullstack', 'Fullstack'], ['api-only', 'API only'], ['frontend-only', 'Frontend only']], ['fullstack', 'api-only', 'frontend-only'], {
     'api-only': [{ path: 'stack.backend', equals: 'nestjs' }, { path: 'stack.frontend', equals: 'none' }],
     'frontend-only': [
@@ -60,16 +63,12 @@ export const catalog: GeneratorCatalog = {
   ] }),
   deploymentProfiles: choices([['local', 'Local'], ['docker', 'Docker'], ['vercel', 'Vercel'], ['vps', 'VPS']], ['local']),
   outputDestinations: choices([['zip', 'Download ZIP'], ['github', 'Push to GitHub']], ['zip']),
-  themes: choices([
-    ['modern-saas', 'Modern SaaS'], ['ecommerce-store', 'E-commerce Store'], ['admin-dashboard', 'Admin Dashboard'],
-    ['pos', 'POS'], ['warehouse-industrial', 'Warehouse Industrial'], ['soft-pastel', 'Soft Pastel'],
-    ['dark-developer', 'Dark Developer'], ['corporate', 'Corporate'],
-  ], ['modern-saas']),
-  palettes: choices([['blue', 'Blue'], ['emerald', 'Emerald'], ['purple', 'Purple'], ['amber', 'Amber'], ['rose', 'Rose'], ['custom', 'Custom']], ['blue']),
+  themes: choices(Object.entries(themePresets).map(([value, preset]) => [value, preset.label]), Object.keys(themePresets)),
+  palettes: choices([['blue', 'Blue'], ['emerald', 'Emerald'], ['purple', 'Purple'], ['amber', 'Amber'], ['rose', 'Rose'], ['custom', 'Custom']], ['blue', 'emerald', 'purple', 'amber', 'rose', 'custom']),
   themeModes: choices([['light', 'Light'], ['dark', 'Dark']], ['light', 'dark']),
-  themeRadii: choices([['none', 'None'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']], ['medium']),
-  themeShadows: choices([['none', 'None'], ['subtle', 'Subtle'], ['medium', 'Medium'], ['strong', 'Strong']], ['subtle']),
-  themeDensities: choices([['compact', 'Compact'], ['comfortable', 'Comfortable']], ['comfortable']),
+  themeRadii: choices([['none', 'None'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']], ['none', 'small', 'medium', 'large']),
+  themeShadows: choices([['none', 'None'], ['subtle', 'Subtle'], ['medium', 'Medium'], ['strong', 'Strong']], ['none', 'subtle', 'medium', 'strong']),
+  themeDensities: choices([['compact', 'Compact'], ['comfortable', 'Comfortable']], ['compact', 'comfortable']),
   optionalFeatures: choices([['redis', 'Redis'], ['docker', 'Docker']]),
 };
 
@@ -79,7 +78,9 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
     issues.push({ path, code: path.startsWith('features.') ? 'FEATURE_UNAVAILABLE' : 'TEMPLATE_UNAVAILABLE', message: `${String(value)}: ${later}` });
   };
   const matches = (path: string, value: string, supported: string) => { if (value !== supported) unavailable(path, value); };
-  matches('project.blueprint', config.project.blueprint, 'blank-fullstack');
+  if (config.project.blueprint === 'ecommerce' && (config.project.shape !== 'fullstack' || config.repository.layout !== 'monorepo')) {
+    issues.push({ path: 'project.blueprint', code: 'FEATURE_DEPENDENCY', message: 'The E-commerce blueprint requires a fullstack monorepo output.' });
+  }
   if (config.project.shape === 'fullstack' && config.repository.layout === 'single-app') {
     issues.push({ path: 'repository.layout', code: 'FEATURE_DEPENDENCY', message: 'Single-app layout currently supports API-only and frontend-only projects.' });
   }
@@ -116,12 +117,6 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   if (config.project.shape !== 'frontend-only') matches('dataMode', config.dataMode, 'api-backed');
   matches('deploymentProfile', config.deploymentProfile, 'local');
   matches('output.destination', config.output.destination, 'zip');
-  matches('theme.preset', config.theme.preset, 'modern-saas');
-  matches('theme.palette', config.theme.palette, 'blue');
-  matches('theme.radius', config.theme.radius, 'medium');
-  matches('theme.shadow', config.theme.shadow, 'subtle');
-  matches('theme.density', config.theme.density, 'comfortable');
-
   if (config.features.rbac && !config.features.auth) issues.push({ path: 'features.auth', code: 'FEATURE_DEPENDENCY', message: 'RBAC requires authentication. Enable auth or disable RBAC.' });
   if (config.features.navigation === 'dynamic' && !config.features.rbac) issues.push({ path: 'features.rbac', code: 'FEATURE_DEPENDENCY', message: 'Dynamic navigation requires RBAC. Enable RBAC or disable dynamic navigation.' });
   if (config.features.audit && !config.features.auth) issues.push({ path: 'features.auth', code: 'FEATURE_DEPENDENCY', message: 'User audit events require authentication. Enable auth or disable audit.' });

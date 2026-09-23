@@ -7,12 +7,14 @@ describe('role permissions', () => {
     expect(hasPermission(member, 'projects:read')).toBe(true);
     expect(hasPermission(member, 'projects:write')).toBe(false);
     expect(hasPermission(member, 'users:manage')).toBe(false);
+    expect(hasPermission(member, 'products:read')).toBe(__ECOMMERCE_MEMBER_PRODUCT_ACCESS__);
   });
 
   it('grants company administrators their company permissions and root all permissions', () => {
     const admin = { userId: 'u2', companyId: 'c1', systemRole: 'company-admin' as const };
     const root = { userId: 'u3', companyId: 'root', systemRole: 'root' as const };
     expect(hasPermission(admin, 'settings:manage')).toBe(true);
+    expect(hasPermission(admin, 'products:manage')).toBe(__ECOMMERCE_ADMIN_PRODUCT_ACCESS__);
     expect(hasPermission(root, 'audit:read')).toBe(true);
     expect(hasPermission(admin, 'unknown:permission')).toBe(false);
   });

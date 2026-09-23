@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import { strToU8, zipSync } from 'fflate';
 import type { ProjectConfig } from '@project-forge/contracts';
+import { resolveThemeTokens } from '@project-forge/contracts';
 import { assertSafeArchivePath, GenerationError, resolveGeneration } from './plan';
 export { assertSafeArchivePath, ConfigurationError, createPlan, GenerationError } from './plan';
 export type { GenerationPlan } from './plan';
@@ -28,6 +29,7 @@ function readTemplate(path: string): string {
 }
 
 function render(source: string, config: ProjectConfig): string {
+  const themeTokens = resolveThemeTokens(config.theme);
   const auth = config.features.auth || config.project.profile === 'enterprise';
   const authSchema = auth ? `
 enum CompanyRole {
@@ -119,6 +121,12 @@ Successful authenticated write requests create company-scoped audit events. Meta
 ` : '';
   const seedCommand = config.features.rbac ? 'node prisma/seed.mjs' : 'echo No RBAC seed data selected';
   const seedNavigation = config.features.navigation === 'dynamic' ? 'true' : 'false';
+  const ecommerce = config.project.blueprint === 'ecommerce';
+  const ecommercePermissionCodes = ecommerce ? "['products:read', 'products:manage']" : '[]';
+  const ecommerceMemberGrants = ecommerce ? ", 'products:read'" : '';
+  const ecommerceAdminGrants = ecommerce ? ", 'products:read', 'products:manage'" : '';
+  const ecommerceSeedPermissions = ecommerce ? "[['products:read', 'Read product catalog'], ['products:manage', 'Manage products']]" : '[]';
+  const ecommerceSeedNavigation = ecommerce ? "[['products', 'Products', '/products', 'products:read', 15]]" : '[]';
   const authFrontendImport = auth ? "import StarterAuth from './components/StarterAuth.vue';" : '';
   const authFrontendUi = auth ? '<StarterAuth />' : '';
   const navItems = config.features.navigation === 'dynamic'
@@ -134,10 +142,30 @@ This profile includes company registration, salted scrypt password hashing, 15-m
 ` : '';
   return source
     .replaceAll('__PROJECT_NAME__', config.project.name)
+    .replaceAll('Blank fullstack starter', ecommerce ? 'E-commerce fullstack starter' : 'Blank fullstack starter')
     .replaceAll('__PRIMARY_COLOR__', config.theme.primary)
     .replaceAll('__ACCENT_COLOR__', config.theme.accent)
     .replaceAll('__THEME_MODE__', config.theme.mode)
+    .replaceAll('__BACKGROUND_COLOR__', themeTokens.background)
+    .replaceAll('__SURFACE_COLOR__', themeTokens.surface)
+    .replaceAll('__TEXT_COLOR__', themeTokens.text)
+    .replaceAll('__RADIUS__', themeTokens.radius)
+    .replaceAll('__SHADOW__', themeTokens.shadow)
+    .replaceAll('__DENSITY_GAP__', themeTokens.densityGap)
     .replaceAll('__PROFILE_LABEL__', config.project.profile === 'enterprise' ? 'Enterprise' : 'Minimal')
+    .replaceAll('/*__BLUEPRINT_README__*/', ecommerce ? '\n## E-commerce starter\n\nThe product API serves an in-memory sample catalog that resets when the API restarts. The schema includes a Product model to guide a persistent implementation. This is a ready-to-extend catalog scaffold, not a checkout, payment, inventory, or order system.\n' : '')
+    .replaceAll('/*__BLUEPRINT_IMPORT__*/', ecommerce ? "import { ProductsModule } from './products/products.module';" : '')
+    .replaceAll('/*__BLUEPRINT_MODULE__*/', ecommerce ? ', ProductsModule' : '')
+    .replaceAll('/*__ECOMMERCE_PRISMA_SCHEMA__*/', ecommerce ? `\nmodel Product {\n  id          String   @id @default(cuid())\n  sku         String   @unique\n  name        String\n  description String\n  priceCents  Int\n  currency    String   @default(\"USD\")\n  category    String\n  active      Boolean  @default(true)\n  createdAt   DateTime @default(now())\n}\n` : '')
+    .replaceAll('__ECOMMERCE_PERMISSION_CODES__', ecommercePermissionCodes)
+    .replaceAll('__ECOMMERCE_MEMBER_GRANTS__', ecommerceMemberGrants)
+    .replaceAll('__ECOMMERCE_ADMIN_GRANTS__', ecommerceAdminGrants)
+    .replaceAll('__ECOMMERCE_MEMBER_CODES__', ecommerce ? "['products:read']" : '[]')
+    .replaceAll('__ECOMMERCE_NAVIGATION_COUNT__', ecommerce && config.features.navigation === 'dynamic' ? '5' : '4')
+    .replaceAll('__ECOMMERCE_MEMBER_PRODUCT_ACCESS__', ecommerce ? 'true' : 'false')
+    .replaceAll('__ECOMMERCE_ADMIN_PRODUCT_ACCESS__', ecommerce ? 'true' : 'false')
+    .replaceAll('__ECOMMERCE_SEED_PERMISSIONS__', ecommerceSeedPermissions)
+    .replaceAll('__ECOMMERCE_SEED_NAVIGATION__', ecommerceSeedNavigation)
     .replaceAll('/*__AUTH_FRONTEND_IMPORT__*/', authFrontendImport)
     .replaceAll('/*__AUTH_FRONTEND_SETUP__*/', '')
     .replaceAll('<!--__AUTH_FRONTEND_UI__-->', authFrontendUi)

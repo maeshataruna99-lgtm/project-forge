@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './theme';
 
 const projectName = z.string().min(2).max(50)
   .regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers, and single hyphens')

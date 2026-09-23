@@ -11,6 +11,9 @@
     "db:migrate": "prisma migrate dev --name init --schema prisma/schema.prisma",
     "db:seed": "__SEED_COMMAND__"
   },
+  "dependencies": {
+    "@prisma/client": "^6.19.0"
+  },
   "devDependencies": {
     "prisma": "^6.19.0",
     "typescript": "^5.9.0"

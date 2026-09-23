@@ -27,10 +27,14 @@ describe('first template registry', () => {
     expect(validateCompatibility(base)).toEqual([]);
   });
 
-  it('explains why an unimplemented blueprint is disabled', () => {
-    const issues = validateCompatibility({ ...base, project: { ...base.project, blueprint: 'ecommerce' } });
-    expect(issues).toContainEqual(expect.objectContaining({ path: 'project.blueprint', code: 'TEMPLATE_UNAVAILABLE' }));
-    expect(issues[0]?.message.length).toBeGreaterThan(10);
+  it('accepts E-commerce for fullstack monorepos and rejects incompatible shapes', () => {
+    expect(validateCompatibility({ ...base, project: { ...base.project, blueprint: 'ecommerce' } })).toEqual([]);
+    expect(validateCompatibility({
+      ...base,
+      project: { ...base.project, blueprint: 'ecommerce', shape: 'frontend-only' },
+      stack: { ...base.stack, backend: 'none', database: 'none', orm: 'none' },
+      dataMode: 'demo',
+    })).toContainEqual(expect.objectContaining({ path: 'project.blueprint', code: 'FEATURE_DEPENDENCY' }));
   });
 
   it('rejects server-only authorization on the frontend-only shape', () => {
@@ -146,7 +150,7 @@ describe('first template registry', () => {
   });
 
   it('publishes machine readable availability', () => {
-    expect(catalog.blueprints.find(choice => choice.value === 'ecommerce')?.available).toBe(false);
+    expect(catalog.blueprints.find(choice => choice.value === 'ecommerce')?.available).toBe(true);
   });
 
   it('covers every enum choice and boolean state in the configuration schema', () => {

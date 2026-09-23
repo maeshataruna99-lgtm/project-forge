@@ -25,3 +25,4 @@ model ExampleItem {
 }
 
 /*__AUTH_PRISMA_SCHEMA__*/
+/*__ECOMMERCE_PRISMA_SCHEMA__*/

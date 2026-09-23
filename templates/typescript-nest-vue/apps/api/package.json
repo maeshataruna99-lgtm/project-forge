@@ -13,11 +13,13 @@
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
     "@prisma/client": "^6.19.0",
+    "express": "^5.1.0",
     "@__PROJECT_NAME__/contracts": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "tsx": "^4.20.0",
     "vitest": "^3.2.0"

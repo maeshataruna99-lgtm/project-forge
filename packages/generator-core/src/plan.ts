@@ -86,6 +86,9 @@ function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
     sources.set('README.md', 'shapes/frontend-only/README.md');
   } else {
     manifest = baseManifest;
+    if (config.project.blueprint === 'ecommerce') {
+      sources.set('apps/web/src/App.vue', 'blueprints/ecommerce/apps/web/src/App.vue');
+    }
   }
   return manifest.map(destination => ({ source: sources.get(destination) ?? destination, destination }));
 }

@@ -1,11 +1,11 @@
 import type { AuthIdentity } from '../auth/auth.service';
 
-export const permissionCodes = ['projects:read', 'projects:write', 'users:manage', 'settings:manage', 'audit:read'] as const;
+export const permissionCodes = [...['projects:read', 'projects:write', 'users:manage', 'settings:manage', 'audit:read'], ...__ECOMMERCE_PERMISSION_CODES__] as const;
 export type PermissionCode = typeof permissionCodes[number];
 
 const rolePermissions: Record<AuthIdentity['systemRole'], readonly PermissionCode[]> = {
-  member: ['projects:read'],
-  'company-admin': ['projects:read', 'projects:write', 'users:manage', 'settings:manage', 'audit:read'],
+  member: ['projects:read'__ECOMMERCE_MEMBER_GRANTS__],
+  'company-admin': ['projects:read', 'projects:write', 'users:manage', 'settings:manage', 'audit:read'__ECOMMERCE_ADMIN_GRANTS__],
   root: permissionCodes,
 };
 

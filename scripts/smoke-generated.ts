@@ -72,6 +72,14 @@ const configs = [
       dataMode: 'demo',
     },
   },
+  {
+    name: 'ecommerce',
+    value: {
+      ...config,
+      project: { ...config.project, blueprint: 'ecommerce', profile: 'enterprise' },
+      features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
+    },
+  },
 ];
 for (const selected of configs) {
   const files = unzipSync(createArchive(selected.value));

@@ -4,10 +4,11 @@ const permissions = [
   ['users:manage', 'Manage company members'],
   ['settings:manage', 'Manage company settings'],
   ['audit:read', 'Read company audit events'],
+  ...__ECOMMERCE_SEED_PERMISSIONS__,
 ];
 
 const grants = {
-  MEMBER: ['projects:read'],
+  MEMBER: ['projects:read', ...__ECOMMERCE_MEMBER_CODES__],
   ADMIN: permissions.map(([code]) => code),
 };
 
@@ -16,6 +17,7 @@ const navigation = [
   ['team', 'Team', '/team', 'users:manage', 20],
   ['settings', 'Settings', '/settings', 'settings:manage', 30],
   ['audit', 'Audit log', '/audit', 'audit:read', 40],
+  ...__ECOMMERCE_SEED_NAVIGATION__,
 ];
 
 export async function seedAccessControl(prisma, { seedNavigation = false } = {}) {

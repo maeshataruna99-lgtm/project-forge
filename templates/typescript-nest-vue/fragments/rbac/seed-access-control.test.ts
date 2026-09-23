@@ -26,6 +26,6 @@ describe('access-control seed', () => {
     const totals = [permissions.size, grants.size, navigation.size];
     await seedAccessControl(prisma, { seedNavigation: true });
     expect([permissions.size, grants.size, navigation.size]).toEqual(totals);
-    expect(navigation.size).toBe(4);
+    expect(navigation.size).toBe(__ECOMMERCE_NAVIGATION_COUNT__);
   });
 });

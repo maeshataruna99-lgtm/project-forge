@@ -3,9 +3,12 @@
   color-scheme: __THEME_MODE__;
   --primary: __PRIMARY_COLOR__;
   --accent: __ACCENT_COLOR__;
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --text: #172033;
+  --background: __BACKGROUND_COLOR__;
+  --surface: __SURFACE_COLOR__;
+  --text: __TEXT_COLOR__;
+  --radius: __RADIUS__;
+  --shadow: __SHADOW__;
+  --density-gap: __DENSITY_GAP__;
 }
 :root[data-theme='dark'] { --background: #111827; --surface: #1f2937; --text: #f9fafb; }
 * { box-sizing: border-box; }
@@ -14,5 +17,9 @@ body { margin: 0; background: var(--background); color: var(--text); }
 .badge { display: inline-block; color: var(--primary); font-weight: 700; }
 h1 { font-size: clamp(2.5rem, 7vw, 5rem); margin: 16px 0; }
 p { line-height: 1.6; }
-.card { margin-top: 36px; padding: 28px; border: 1px solid var(--accent); border-radius: 16px; background: var(--surface); }
-a { display: inline-block; margin-top: 8px; padding: 12px 18px; border-radius: 8px; background: var(--primary); color: white; text-decoration: none; }
+.card { margin-top: var(--density-gap); padding: calc(var(--density-gap) * 1.15); border: 1px solid var(--accent); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+a { display: inline-block; margin-top: 8px; padding: 12px 18px; border-radius: var(--radius); background: var(--primary); color: var(--surface); text-decoration: none; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--density-gap); margin-top: var(--density-gap); }
+.product-card h2 { margin-top: 0; }
+.product-category { color: var(--primary); font-weight: 700; }
+.starter-note { border-left: 3px solid var(--accent); padding-left: 1rem; }

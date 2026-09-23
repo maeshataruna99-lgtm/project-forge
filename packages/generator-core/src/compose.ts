@@ -24,6 +24,7 @@ const rbacFiles: RegisteredFile[] = [
   { source: 'fragments/rbac/projects.controller.ts', destination: 'apps/api/src/rbac/projects.controller.ts' },
   { source: 'fragments/rbac/rbac.module.ts', destination: 'apps/api/src/rbac/rbac.module.ts' },
   { source: 'fragments/rbac/seed-access-control.mjs', destination: 'apps/api/src/rbac/seed-access-control.mjs' },
+  { source: 'fragments/rbac/seed-access-control.d.ts', destination: 'apps/api/src/rbac/seed-access-control.d.ts' },
   { source: 'fragments/rbac/seed-access-control.test.ts', destination: 'apps/api/src/rbac/seed-access-control.test.ts' },
   { source: 'fragments/rbac/seed.mjs', destination: 'prisma/seed.mjs' },
 ];
@@ -40,6 +41,13 @@ const auditFiles: RegisteredFile[] = [
   { source: 'fragments/audit/audit.controller.ts', destination: 'apps/api/src/audit/audit.controller.ts' },
   { source: 'fragments/audit/audit.module.ts', destination: 'apps/api/src/audit/audit.module.ts' },
 ];
+const ecommerceFiles: RegisteredFile[] = [
+  { source: 'blueprints/ecommerce/apps/api/src/products/product.ts', destination: 'apps/api/src/products/product.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.service.ts', destination: 'apps/api/src/products/products.service.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.ts', destination: 'apps/api/src/products/products.controller.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.module.ts', destination: 'apps/api/src/products/products.module.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.test.ts', destination: 'apps/api/src/products/products.controller.test.ts' },
+];
 
 export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
   const files: RegisteredFile[] = [];
@@ -49,5 +57,11 @@ export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
   if (config.features.rbac) files.push(...rbacFiles);
   if (config.features.navigation === 'dynamic') files.push(...navigationFiles);
   if (config.features.audit) files.push(...auditFiles);
+  if (config.project.blueprint === 'ecommerce') {
+    files.push(...ecommerceFiles.map(file => config.features.rbac && file.destination.endsWith('products.controller.ts')
+      ? { ...file, source: 'blueprints/ecommerce/apps/api/src/products/products.controller.secured.ts' }
+      : file));
+    files.push({ source: 'blueprints/ecommerce/fragments/permissions.ts', destination: 'apps/api/src/products/permissions.ts' });
+  }
   return files;
 }

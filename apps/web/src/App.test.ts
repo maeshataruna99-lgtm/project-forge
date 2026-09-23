@@ -10,7 +10,7 @@ const available = (value: string, label: string) => ({ value, label, available: 
 const unavailable = (value: string, label: string) => ({ value, label, available: false, reason });
 const catalog = {
   profiles: [available('minimal', 'Minimal'), available('enterprise', 'Enterprise')],
-  blueprints: [available('blank-fullstack', 'Blank Fullstack'), unavailable('ecommerce', 'E-commerce')],
+  blueprints: [available('blank-fullstack', 'Blank Fullstack'), available('ecommerce', 'E-commerce')],
   shapes: [available('fullstack', 'Fullstack'), unavailable('api-only', 'API only')],
   layouts: [available('monorepo', 'Monorepo'), unavailable('single-app', 'Single app')],
   languages: [available('typescript', 'TypeScript')],
@@ -40,12 +40,12 @@ const catalog = {
   dataModes: [available('api-backed', 'API-backed'), unavailable('demo', 'Demo data')],
   deploymentProfiles: [available('local', 'Local'), unavailable('docker', 'Docker'), unavailable('vercel', 'Vercel'), unavailable('vps', 'VPS')],
   outputDestinations: [available('zip', 'Download ZIP'), unavailable('github', 'Push to GitHub')],
-  themes: [available('modern-saas', 'Modern SaaS')],
-  palettes: [available('blue', 'Blue'), unavailable('emerald', 'Emerald'), unavailable('purple', 'Purple'), unavailable('amber', 'Amber'), unavailable('rose', 'Rose'), unavailable('custom', 'Custom')],
+  themes: ['modern-saas', 'ecommerce-store', 'admin-dashboard', 'pos', 'warehouse-industrial', 'soft-pastel', 'dark-developer', 'corporate'].map(value => available(value, value)),
+  palettes: ['blue', 'emerald', 'purple', 'amber', 'rose', 'custom'].map(value => available(value, value)),
   themeModes: [available('light', 'Light'), available('dark', 'Dark')],
-  themeRadii: [unavailable('none', 'None'), unavailable('small', 'Small'), available('medium', 'Medium'), unavailable('large', 'Large')],
-  themeShadows: [unavailable('none', 'None'), available('subtle', 'Subtle'), unavailable('medium', 'Medium'), unavailable('strong', 'Strong')],
-  themeDensities: [unavailable('compact', 'Compact'), available('comfortable', 'Comfortable')],
+  themeRadii: ['none', 'small', 'medium', 'large'].map(value => available(value, value)),
+  themeShadows: ['none', 'subtle', 'medium', 'strong'].map(value => available(value, value)),
+  themeDensities: ['compact', 'comfortable'].map(value => available(value, value)),
 };
 
 async function setup() {
@@ -132,17 +132,16 @@ describe('configuration wizard', () => {
     expect(wrapper.find('h2').text()).toBe('Stack');
   });
 
-  it('labels selects and keeps unsupported catalog choices disabled with adjacent reasons', async () => {
+  it('labels selects and keeps unsupported stack choices disabled with adjacent reasons', async () => {
     const wrapper = await setup();
     expect(wrapper.get('label[for="blueprint"]').text()).toMatch(/blueprint/i);
-    expect(wrapper.get('select#blueprint option[value="ecommerce"]').attributes('disabled')).toBeDefined();
-    expect(wrapper.get('#blueprint-reasons').text()).toContain(`E-commerce: ${reason}`);
+    expect(wrapper.get('select#blueprint option[value="ecommerce"]').attributes('disabled')).toBeUndefined();
     await wrapper.get('select#blueprint').setValue('ecommerce');
     await wrapper.get('button[type="submit"]').trigger('click');
     expect(wrapper.get('select#backend option[value="none"]').attributes('disabled')).toBeDefined();
     expect(wrapper.get('#backend-reasons').text()).toContain(`No backend: ${reason}`);
     await wrapper.get('button[aria-label="Back to Project"]').trigger('click');
-    expect((wrapper.get('select#blueprint').element as HTMLSelectElement).value).toBe('blank-fullstack');
+    expect((wrapper.get('select#blueprint').element as HTMLSelectElement).value).toBe('ecommerce');
   });
 
   it('lets a keyboard user traverse every step and change an available theme choice', async () => {
@@ -155,6 +154,16 @@ describe('configuration wizard', () => {
     const mode = wrapper.get('select#themeMode');
     await mode.setValue('dark');
     expect((mode.element as HTMLSelectElement).value).toBe('dark');
+    expect(wrapper.get('[data-testid="theme-preview"]').attributes('data-mode')).toBe('dark');
+    expect(wrapper.find('#themePalette').exists()).toBe(true);
+    expect(wrapper.find('#themeRadius').exists()).toBe(true);
+    expect(wrapper.find('#themeShadow').exists()).toBe(true);
+    expect(wrapper.find('#themeDensity').exists()).toBe(true);
+    expect(wrapper.get('.contrast-feedback').text()).toMatch(/Primary: Contrast/);
+    await wrapper.get('#themePreset').setValue('ecommerce-store');
+    expect((wrapper.get('#themePreset').element as HTMLSelectElement).value).toBe('ecommerce-store');
+    expect(wrapper.get('[data-testid="theme-preview"]').attributes('data-preset')).toBe('ecommerce-store');
+    expect((wrapper.get('#primary').element as HTMLInputElement).value).toBe('#fb923c');
   });
 
   it('moves focus to each new heading after Next, Back, and step navigation', async () => {

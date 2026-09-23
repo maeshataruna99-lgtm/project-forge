@@ -214,4 +214,49 @@ describe('generator core', () => {
     expect(JSON.parse(strFromU8(files['sample-app/apps/api/package.json']!)).dependencies).not.toHaveProperty('@sample-app/contracts');
     expect(strFromU8(files['sample-app/README.md']!)).toContain('no database or persistent storage');
   });
+
+  it('composes the registered E-commerce catalog API, permission codes, navigation, and UI', () => {
+    const ecommerce = {
+      ...config,
+      project: { ...config.project, blueprint: 'ecommerce' },
+      features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic' },
+    };
+    const plan = createPlan(ecommerce);
+    expect(plan.files).toContain('apps/api/src/products/products.controller.ts');
+    expect(plan.files).toContain('apps/web/src/App.vue');
+    const files = unzipSync(createArchive(ecommerce));
+    expect(Object.keys(files)).toContain('sample-app/apps/api/src/products/products.controller.test.ts');
+    expect(strFromU8(files['sample-app/apps/api/src/main.ts']!)).toContain("import { ProductsModule } from './products/products.module';");
+    expect(strFromU8(files['sample-app/apps/api/src/products/products.controller.ts']!)).toContain("@RequirePermission('products:read')");
+    expect(strFromU8(files['sample-app/apps/api/src/rbac/permissions.ts']!)).toContain("'products:read'");
+    expect(strFromU8(files['sample-app/apps/api/src/rbac/seed-access-control.mjs']!)).toContain("'/products'");
+    expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain("fetch('/api/products')");
+    expect(strFromU8(files['sample-app/README.md']!)).toContain('not a checkout, payment, inventory, or order system');
+  });
+
+  it('generates the same resolved theme tokens used by the wizard preview', () => {
+    const themed = {
+      ...config,
+      theme: { ...config.theme, preset: 'dark-developer', palette: 'purple', mode: 'dark', primary: '#A78BFA', accent: '#F0ABFC', radius: 'large', shadow: 'strong', density: 'compact' },
+    };
+    const files = unzipSync(createArchive(themed));
+    const css = strFromU8(files['sample-app/apps/web/src/style.css']!);
+    expect(css).toContain('--background: #09090B');
+    expect(css).toContain('--surface: #18181B');
+    expect(css).toContain('--text: #FAFAFA');
+    expect(css).toContain('--radius: 1rem');
+    expect(css).toContain('--shadow: 0 12px 28px rgb(0 0 0 / 0.28)');
+    expect(css).toContain('--density-gap: 0.75rem');
+    expect(css).not.toMatch(/__[A-Z_]+__/);
+  });
+
+  it.each([
+    ['modern-saas', '#F8FAFC'], ['ecommerce-store', '#FFF9F5'], ['admin-dashboard', '#F1F5F9'],
+    ['pos', '#F8FAF5'], ['warehouse-industrial', '#F4F5F7'], ['soft-pastel', '#FFF7FB'],
+    ['dark-developer', '#F4F4F5'], ['corporate', '#F3F6FA'],
+  ] as const)('renders the registered %s preset background into preview/runtime tokens', (preset, background) => {
+    const themed = { ...config, theme: { ...config.theme, preset } };
+    const files = unzipSync(createArchive(themed));
+    expect(strFromU8(files['sample-app/apps/web/src/style.css']!)).toContain(`--background: ${background}`);
+  });
 });
