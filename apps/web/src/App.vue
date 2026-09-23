@@ -34,7 +34,7 @@ onMounted(async () => {
 });
 
 watch(current, async () => {
-  if (current.value === 4) void validate();
+  if (current.value === 4 && !(archiveState.value === 'downloading' && JSON.stringify(config.value) === validatedConfig)) void validate();
   await nextTick();
   wizardForm.value?.querySelector('h2')?.focus();
 });

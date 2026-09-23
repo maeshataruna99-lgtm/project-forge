@@ -150,4 +150,27 @@ describe('catalog to validated ZIP journey', () => {
     expect(create).not.toHaveBeenCalled();
     expect(wrapper.text()).not.toContain('ZIP download started');
   });
+
+  it('keeps an archive in progress when returning to Review without changing configuration', async () => {
+    let finishArchive!: (response: Response) => void;
+    const archiveResponse = new Promise<Response>(resolve => { finishArchive = resolve; });
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json(catalog)).mockResolvedValueOnce(Response.json(plan))
+      .mockReturnValueOnce(archiveResponse);
+    vi.stubGlobal('URL', { createObjectURL: vi.fn().mockReturnValue('blob:test'), revokeObjectURL: vi.fn() });
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { downloads.push(this.download); });
+    const wrapper = await setup(fetchMock);
+    await review(wrapper);
+    await wrapper.get('button[aria-label="Download ZIP archive"]').trigger('click');
+    await wrapper.get('button[aria-label="Back to Theme"]').trigger('click');
+    await wrapper.get('button[type="submit"]').trigger('click');
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(wrapper.text()).toContain('apps/web/src/App.vue');
+    expect(wrapper.get('button[aria-label="Download ZIP archive"]').text()).toContain('Preparing ZIP');
+    finishArchive(new Response(new Uint8Array([80, 75]), { status: 201 }));
+    await tick();
+    expect(downloads).toEqual(['sample-app.zip']);
+    expect(wrapper.text()).toContain('ZIP download started');
+  });
 });
