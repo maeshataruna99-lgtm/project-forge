@@ -24,8 +24,26 @@ jobs:
       - name: Verify generated starter
         run: |
           generated_dir="$(pnpm --silent smoke:extract)"
-          cd "$generated_dir"
+          cd "$generated_dir/minimal/sample-app"
           pnpm install
+          pnpm db:generate
           pnpm build
           pnpm test
           DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/DATABASE?schema=public' pnpm exec prisma validate --schema prisma/schema.prisma
+  laravel-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pgsql, pdo_pgsql
+          coverage: none
+      - run: composer validate --strict
+        working-directory: templates/php-laravel
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: templates/php-laravel
+      - run: composer lint
+        working-directory: templates/php-laravel
+      - run: composer test
+        working-directory: templates/php-laravel

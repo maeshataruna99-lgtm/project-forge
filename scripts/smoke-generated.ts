@@ -3,12 +3,10 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { unzipSync } from 'fflate';
+import { projectConfigSchema } from '@project-forge/contracts';
 import { createArchive } from '../packages/generator-core/src/index';
 
-const config = JSON.parse(readFileSync(join(import.meta.dirname, '../examples/minimal-config.json'), 'utf8')) as {
-  project: { name: string; profile: string };
-  features: { auth: boolean };
-};
+const config = projectConfigSchema.parse(JSON.parse(readFileSync(join(import.meta.dirname, '../examples/minimal-config.json'), 'utf8')));
 const output = mkdtempSync(join(tmpdir(), 'project-forge-smoke-'));
 const configs = [
   { name: 'minimal', value: config },
@@ -68,7 +66,7 @@ const configs = [
       ...config,
       project: { ...config.project, shape: 'frontend-only' },
       repository: { ...config.repository, layout: 'single-app' },
-      stack: { ...config.stack, backend: 'none', database: 'none', orm: 'none' },
+      stack: { ...config.stack, backend: 'none', frontend: 'vue-vite', database: 'none', orm: 'none' },
       dataMode: 'demo',
     },
   },
@@ -78,6 +76,19 @@ const configs = [
       ...config,
       project: { ...config.project, blueprint: 'ecommerce', profile: 'enterprise' },
       features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic', audit: true },
+    },
+  },
+  {
+    name: 'deployment-vps',
+    value: { ...config, deploymentProfile: 'vps' },
+  },
+  {
+    name: 'deployment-vercel-frontend',
+    value: {
+      ...config,
+      project: { ...config.project, shape: 'frontend-only' },
+      stack: { ...config.stack, backend: 'none', database: 'none', orm: 'none' },
+      dataMode: 'demo', deploymentProfile: 'vercel',
     },
   },
   {
@@ -116,13 +127,33 @@ const configs = [
       deploymentProfile: 'docker',
     },
   },
+  {
+    name: 'turborepo-fullstack',
+    value: {
+      ...config,
+      repository: { ...config.repository, taskRunner: 'turborepo' },
+    },
+  },
+  {
+    name: 'laravel-api',
+    value: {
+      ...config,
+      project: { ...config.project, blueprint: 'laravel-api', shape: 'api-only' },
+      repository: { ...config.repository, layout: 'single-app', packageManager: 'composer' },
+      stack: { language: 'php', backend: 'laravel', frontend: 'none', database: 'postgresql', orm: 'eloquent' },
+    },
+  },
 ];
-for (const selected of configs) {
+function extract(selected: { name: string; value: unknown }) {
   const files = unzipSync(createArchive(selected.value));
   for (const [path, content] of Object.entries(files)) {
     const target = join(output, selected.name, path);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
+}
+for (const selected of configs) extract(selected);
+for (const preset of ['modern-saas', 'ecommerce-store', 'admin-dashboard', 'pos', 'warehouse-industrial', 'soft-pastel', 'dark-developer', 'corporate'] as const) {
+  extract({ name: `theme-${preset}`, value: projectConfigSchema.parse({ ...config, theme: { ...config.theme, preset } }) });
 }
 process.stdout.write(output);

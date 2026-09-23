@@ -27,6 +27,51 @@ describe('first template registry', () => {
     expect(validateCompatibility(base)).toEqual([]);
   });
 
+  it('registers a compatible standalone Laravel API stack', () => {
+    const candidate = {
+      ...base,
+      project: { ...base.project, blueprint: 'laravel-api', shape: 'api-only' },
+      repository: { ...base.repository, layout: 'single-app', packageManager: 'composer' },
+      stack: { language: 'php', backend: 'laravel', frontend: 'none', database: 'postgresql', orm: 'eloquent' },
+    };
+    const parsed = projectConfigSchema.safeParse(candidate);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(validateCompatibility(parsed.data)).toEqual([]);
+    expect(catalog.blueprints.find(choice => choice.value === 'laravel-api')?.available).toBe(true);
+    expect(catalog.languages.find(choice => choice.value === 'php')?.available).toBe(true);
+    expect(catalog.backends.find(choice => choice.value === 'laravel')?.available).toBe(true);
+    expect(catalog.orms.find(choice => choice.value === 'eloquent')?.available).toBe(true);
+    expect(catalog.packageManagers.find(choice => choice.value === 'composer')?.available).toBe(true);
+  });
+
+  it('allows the optional GitHub output destination for each supported template pack', () => {
+    expect(validateCompatibility({ ...base, output: { destination: 'github' } })).toEqual([]);
+    const laravel = {
+      ...base,
+      project: { ...base.project, blueprint: 'laravel-api', shape: 'api-only' },
+      repository: { ...base.repository, layout: 'single-app', packageManager: 'composer' },
+      stack: { language: 'php', backend: 'laravel', frontend: 'none', database: 'postgresql', orm: 'eloquent' },
+      output: { destination: 'github' },
+    } as ProjectConfig;
+    expect(validateCompatibility(laravel)).toEqual([]);
+    expect(catalog.outputDestinations.find(choice => choice.value === 'github')?.available).toBe(true);
+  });
+
+  it('rejects Laravel feature combinations that have no Laravel fragment', () => {
+    const candidate = {
+      ...base,
+      project: { ...base.project, blueprint: 'laravel-api', shape: 'api-only' },
+      repository: { ...base.repository, layout: 'single-app', packageManager: 'composer' },
+      stack: { language: 'php', backend: 'laravel', frontend: 'none', database: 'postgresql', orm: 'eloquent' },
+      features: { ...base.features, auth: true },
+    };
+    const parsed = projectConfigSchema.safeParse(candidate);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(validateCompatibility(parsed.data)).toContainEqual(
+      expect.objectContaining({ path: 'features.auth', code: 'FEATURE_DEPENDENCY' }),
+    );
+  });
+
   it('accepts E-commerce for fullstack monorepos and rejects incompatible shapes', () => {
     expect(validateCompatibility({ ...base, project: { ...base.project, blueprint: 'ecommerce' } })).toEqual([]);
     expect(validateCompatibility({

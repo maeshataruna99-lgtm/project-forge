@@ -1,0 +1,23 @@
+{
+  "name": "__PROJECT_NAME__",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "pnpm db:generate && turbo run build",
+    "test": "pnpm db:generate && turbo run test",
+    "typecheck": "pnpm db:generate && turbo run typecheck",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --name init --schema prisma/schema.prisma",
+    "db:seed": "__SEED_COMMAND__"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.0",
+    "turbo": "2.11.3",
+    "typescript": "^5.9.0"
+  }
+}

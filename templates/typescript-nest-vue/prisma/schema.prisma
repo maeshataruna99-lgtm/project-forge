@@ -11,7 +11,7 @@ model Company {
   id    String        @id @default(cuid())
   name  String
   items ExampleItem[]
-  memberships CompanyMembership[]
+  /*__AUTH_COMPANY_RELATION__*/
   /*__AUDIT_COMPANY_RELATION__*/
 }
 

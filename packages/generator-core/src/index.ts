@@ -9,15 +9,15 @@ import { assertSafeArchivePath, GenerationError, resolveGeneration } from './pla
 export { assertSafeArchivePath, ConfigurationError, createPlan, GenerationError } from './plan';
 export type { GenerationPlan } from './plan';
 
-const templateRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../templates/typescript-nest-vue');
+const templateRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../templates');
 const MAX_ARCHIVE_BYTES = 2_000_000;
 const MAX_SOURCE_BYTES = 2_000_000;
 const MAX_GENERATION_MS = 5_000;
 const ARCHIVE_MTIME = new Date('1980-01-01T00:00:00.000Z');
 
-function readTemplate(path: string): string {
+function readTemplate(templatePack: 'typescript-nest-vue' | 'php-laravel', path: string): string {
   try {
-    const root = realpathSync(templateRoot);
+    const root = realpathSync(resolve(templateRoot, templatePack));
     const requested = resolve(root, path);
     const actual = realpathSync(requested);
     const inside = relative(root, actual);
@@ -207,6 +207,7 @@ Run \`pnpm install\` and \`pnpm dev\` to start the API and frontend. No database
 This profile includes company registration, salted scrypt password hashing, 15-minute HMAC-signed access tokens, seven-day refresh tokens, and a bearer-token guard. Set a private random AUTH_SECRET of at least 32 characters before starting the API. Never commit .env. Use POST /auth/register to create a company administrator, then POST /auth/login with an email, password, and optional company ID. POST /auth/refresh renews the token pair; refresh tokens are stateless and remain valid until expiry, so clients must discard them on logout. Protected routes receive identity from the verified access token. Company queries must use CompanyService.where(identity) or scopedQuery(identity, filters); a client-supplied company ID is checked against the signed identity.
 ` : '';
   return source
+    .replaceAll('project-forge/laravel-api-starter', `project-forge/${config.project.name}`)
     .replaceAll('__PROJECT_NAME__', config.project.name)
     .replaceAll('Blank fullstack starter', ecommerce ? 'E-commerce fullstack starter' : 'Blank fullstack starter')
     .replaceAll('__PRIMARY_COLOR__', config.theme.primary)
@@ -257,6 +258,7 @@ This profile includes company registration, salted scrypt password hashing, 15-m
     .replaceAll('/*__FEATURE_IMPORTS__*/', featureImports)
     .replaceAll('/*__FEATURE_MODULES__*/', featureModules ? `, ${featureModules}` : '')
     .replaceAll('/*__AUTH_SECRET__*/', auth ? 'AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters' : '')
+    .replaceAll('  /*__AUTH_COMPANY_RELATION__*/', auth ? '  memberships CompanyMembership[]' : '')
     .replaceAll('/*__AUTH_PRISMA_SCHEMA__*/', `${authSchema}${rbacSchema}${navigationSchema}${auditSchema}`)
     .replaceAll('  /*__AUDIT_COMPANY_RELATION__*/', config.features.audit ? '  auditEvents AuditEvent[]' : '')
     .replaceAll('__SEED_COMMAND__', seedCommand)
@@ -273,7 +275,7 @@ function prepareFiles(input: unknown): Record<string, Uint8Array> {
   let totalBytes = 0;
   for (const path of plan.files) {
     const sourcePath = sources.get(path) ?? path;
-    const content = strToU8(render(readTemplate(sourcePath), config));
+    const content = strToU8(render(readTemplate(plan.templatePack, sourcePath), config));
     totalBytes += content.length;
     if (totalBytes > MAX_SOURCE_BYTES) throw new GenerationError();
     const archivePath = `${plan.projectName}/${path}`;

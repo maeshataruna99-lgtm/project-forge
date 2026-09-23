@@ -1,6 +1,6 @@
 import { isAbsolute } from 'node:path';
 import { projectConfigSchema, type ProjectConfig } from '@project-forge/contracts';
-import { validateCompatibility, type CompatibilityIssue } from '@project-forge/template-registry';
+import { resolveTemplatePack, validateCompatibility, type CompatibilityIssue, type TemplatePackId } from '@project-forge/template-registry';
 import { composeFeatureFiles, type RegisteredFile } from './compose';
 
 const baseManifest = [
@@ -37,8 +37,27 @@ const singleFrontendManifest = [
   'apps/web/index.html', 'apps/web/tsconfig.json', 'apps/web/vite.config.ts',
   'apps/web/src/main.ts', 'apps/web/src/App.vue', 'apps/web/src/style.css',
 ] as const;
+const laravelApiManifest = [
+  '.github/workflows/verify-laravel.yml',
+  '.editorconfig', '.env.example', '.gitattributes', '.gitignore', 'README.md', 'artisan', 'composer.json', 'phpunit.xml',
+  'app/Http/Controllers/Api/HealthController.php', 'app/Http/Controllers/Api/ProjectController.php',
+  'app/Models/Project.php', 'app/Models/User.php', 'app/Providers/AppServiceProvider.php',
+  'bootstrap/app.php', 'bootstrap/cache/.gitignore', 'bootstrap/providers.php',
+  'config/app.php', 'config/auth.php', 'config/cache.php', 'config/database.php', 'config/filesystems.php',
+  'config/logging.php', 'config/mail.php', 'config/queue.php', 'config/services.php', 'config/session.php',
+  'database/factories/UserFactory.php', 'database/migrations/0001_01_01_000000_create_users_table.php',
+  'database/migrations/0001_01_01_000001_create_cache_table.php', 'database/migrations/0001_01_01_000002_create_jobs_table.php',
+  'database/migrations/2026_01_01_000000_create_projects_table.php', 'database/seeders/DatabaseSeeder.php',
+  'public/.htaccess', 'public/index.php', 'routes/api.php', 'routes/console.php', 'storage/app/private/.gitignore',
+  'storage/app/public/.gitignore', 'storage/framework/cache/data/.gitignore', 'storage/framework/sessions/.gitignore',
+  'storage/framework/testing/.gitignore', 'storage/framework/views/.gitignore', 'storage/logs/.gitignore',
+  'tests/Feature/HealthTest.php', 'tests/TestCase.php',
+] as const;
 
 function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
+  if (resolveTemplatePack(config) === 'php-laravel') {
+    return laravelApiManifest.map(path => ({ source: path, destination: path }));
+  }
   const sources = new Map<string, string>();
   let manifest: readonly string[];
   if (config.repository.layout === 'single-app') {
@@ -94,7 +113,9 @@ function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
       sources.set('apps/web/src/App.vue', 'blueprints/ecommerce/apps/web/src/App.vue');
     }
   }
+  if (config.repository.taskRunner === 'turborepo') sources.set('package.json', 'package-turbo.json');
   const files = manifest.map(destination => ({ source: sources.get(destination) ?? destination, destination }));
+  if (config.repository.taskRunner === 'turborepo') files.push({ source: 'turbo.json', destination: 'turbo.json' });
   if (config.features.docker || config.deploymentProfile === 'docker') {
     files.push(
       { source: '.dockerignore', destination: '.dockerignore' },
@@ -135,7 +156,7 @@ function baseFilesFor(config: ProjectConfig): RegisteredFile[] {
 }
 
 export type GenerationPlan = {
-  templatePack: 'typescript-nest-vue';
+  templatePack: TemplatePackId;
   projectName: string;
   profile: 'minimal' | 'enterprise';
   blueprint: ProjectConfig['project']['blueprint'];
@@ -188,6 +209,7 @@ function parseConfig(input: unknown): ProjectConfig {
 
 export function resolveGeneration(input: unknown): { config: ProjectConfig; plan: GenerationPlan; baseFiles: RegisteredFile[]; featureFiles: RegisteredFile[] } {
   const config = parseConfig(input);
+  const templatePack = resolveTemplatePack(config);
   const baseFiles = baseFilesFor(config);
   const featureFiles = composeFeatureFiles(config);
   const files = [...baseFiles.map(file => file.destination), ...featureFiles.map(file => file.destination)].sort();
@@ -210,7 +232,7 @@ export function resolveGeneration(input: unknown): { config: ProjectConfig; plan
     baseFiles,
     featureFiles,
     plan: {
-      templatePack: 'typescript-nest-vue',
+      templatePack,
       projectName: config.project.name,
       profile: config.project.profile,
       blueprint: config.project.blueprint,

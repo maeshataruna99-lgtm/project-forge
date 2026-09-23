@@ -10,13 +10,13 @@ export const projectConfigSchema = z.strictObject({
   schemaVersion: z.literal(3),
   project: z.strictObject({
     name: projectName,
-    blueprint: z.enum(['blank-fullstack', 'ecommerce']),
+    blueprint: z.enum(['blank-fullstack', 'ecommerce', 'laravel-api']),
     shape: z.enum(['api-only', 'frontend-only', 'fullstack']),
     profile: z.enum(['minimal', 'enterprise']),
   }),
   repository: z.strictObject({
     layout: z.enum(['monorepo', 'single-app']),
-    packageManager: z.enum(['pnpm']),
+    packageManager: z.enum(['pnpm', 'composer']),
     taskRunner: z.enum(['none', 'turborepo']),
   }),
   stack: z.strictObject({

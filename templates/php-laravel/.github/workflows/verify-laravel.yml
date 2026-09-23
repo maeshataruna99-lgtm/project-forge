@@ -1,0 +1,22 @@
+name: Verify Laravel starter
+on:
+  push:
+  pull_request:
+jobs:
+  laravel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pgsql, pdo_pgsql
+          coverage: none
+      - run: composer validate --strict
+        working-directory: templates/php-laravel
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: templates/php-laravel
+      - run: composer lint
+        working-directory: templates/php-laravel
+      - run: composer test
+        working-directory: templates/php-laravel

@@ -26,6 +26,48 @@ describe('generator core', () => {
     expect(plan.files).toContain('prisma/schema.prisma');
   });
 
+  it('generates an isolated Laravel API pack with Composer and no TypeScript workspace files', () => {
+    const laravel = {
+      ...config,
+      project: { ...config.project, blueprint: 'laravel-api', shape: 'api-only' },
+      repository: { ...config.repository, layout: 'single-app', packageManager: 'composer' },
+      stack: { language: 'php', backend: 'laravel', frontend: 'none', database: 'postgresql', orm: 'eloquent' },
+    };
+    const plan = createPlan(laravel);
+    expect(plan.templatePack).toBe('php-laravel');
+    expect(plan.files).toContain('composer.json');
+    expect(plan.files).toContain('artisan');
+    expect(plan.files).toContain('routes/api.php');
+    expect(plan.files).not.toContain('package.json');
+    const files = unzipSync(createArchive(laravel));
+    expect(strFromU8(files['sample-app/composer.json']!)).toContain('laravel/framework');
+    expect(Object.keys(files).some(path => path.endsWith('.ts') || path.endsWith('.vue'))).toBe(false);
+  });
+
+  it('uses a valid vendor-qualified Composer package name in Laravel output', () => {
+    const laravel = {
+      ...config,
+      project: { ...config.project, blueprint: 'laravel-api', shape: 'api-only' },
+      repository: { ...config.repository, layout: 'single-app', packageManager: 'composer' },
+      stack: { language: 'php', backend: 'laravel', frontend: 'none', database: 'postgresql', orm: 'eloquent' },
+    };
+    const files = unzipSync(createArchive(laravel));
+    expect(JSON.parse(strFromU8(files['sample-app/composer.json']!)).name).toBe('project-forge/sample-app');
+  });
+
+  it('adds Turborepo scripts, dependency graph, and root task configuration only when selected', () => {
+    const turbo = { ...config, repository: { ...config.repository, taskRunner: 'turborepo' } };
+    const plan = createPlan(turbo);
+    expect(plan.files).toContain('turbo.json');
+    const files = unzipSync(createArchive(turbo));
+    const manifest = JSON.parse(strFromU8(files['sample-app/package.json']!));
+    const turboJson = JSON.parse(strFromU8(files['sample-app/turbo.json']!));
+    expect(manifest.devDependencies.turbo).toBeTruthy();
+    expect(manifest.scripts.dev).toBe('turbo run dev');
+    expect(turboJson.tasks.build.dependsOn).toContain('^build');
+    expect(unzipSync(createArchive(config))).not.toHaveProperty('sample-app/turbo.json');
+  });
+
   it('omits disabled optional integrations and their generated dependencies', () => {
     const files = unzipSync(createArchive(config));
     const destinations = Object.keys(files);
@@ -61,6 +103,13 @@ describe('generator core', () => {
     expect(plan.capabilities).toContain('auth');
     expect(plan.features.auth).toBe(true);
     expect(plan.files).toContain('apps/api/src/auth/auth.module.ts');
+  });
+
+  it('omits auth-only Prisma relations from minimal output when authentication is disabled', () => {
+    const files = unzipSync(createArchive(config));
+    const schema = strFromU8(files['sample-app/prisma/schema.prisma']!);
+    expect(schema).not.toContain('CompanyMembership');
+    expect(schema).not.toContain('memberships');
   });
 
   it('generates independently verifiable access and refresh tokens and salted password hashes', async () => {
