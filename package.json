@@ -6,6 +6,8 @@
   "scripts": {
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "web:dev": "pnpm --filter @project-forge/web dev",
+    "web:build": "pnpm --filter @project-forge/web build",
     "smoke:extract": "tsx scripts/smoke-generated.ts"
   },
   "devDependencies": {
