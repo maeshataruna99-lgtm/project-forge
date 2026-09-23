@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { HealthController } from './health.controller';
+/*__AUTH_IMPORT__*/
 
-@Module({ controllers: [HealthController] })
+@Module({ imports: [/*__AUTH_MODULE__*/], controllers: [HealthController] })
 class AppModule {}
 
 async function bootstrap() {

@@ -16,7 +16,7 @@ const booleans = (enabled = false) => [
 ];
 
 export const catalog: GeneratorCatalog = {
-  profiles: choices([['minimal', 'Minimal'], ['enterprise', 'Enterprise']], ['minimal']),
+  profiles: choices([['minimal', 'Minimal'], ['enterprise', 'Enterprise']], ['minimal', 'enterprise']),
   blueprints: choices([['blank-fullstack', 'Blank Fullstack'], ['ecommerce', 'E-commerce']], ['blank-fullstack']),
   shapes: choices([['fullstack', 'Fullstack'], ['api-only', 'API only'], ['frontend-only', 'Frontend only']], ['fullstack']),
   layouts: choices([['monorepo', 'Monorepo'], ['single-app', 'Single app']], ['monorepo']),
@@ -27,9 +27,9 @@ export const catalog: GeneratorCatalog = {
   orms: choices([['prisma', 'Prisma'], ['eloquent', 'Eloquent'], ['none', 'No ORM']], ['prisma']),
   packageManagers: choices([['pnpm', 'pnpm']], ['pnpm']),
   taskRunners: choices([['none', 'None'], ['turborepo', 'Turborepo']], ['none']),
-  companyModes: choices([['single', 'Single company'], ['multi', 'Multiple companies']], ['single']),
+  companyModes: choices([['single', 'Single company'], ['multi', 'Multiple companies']], ['single', 'multi']),
   superAdminScopes: choices([['company', 'Company'], ['global', 'Global']], ['company']),
-  auth: booleans(), authStrategies: choices([['jwt-refresh', 'JWT with refresh tokens'], ['session', 'Session'] ], ['jwt-refresh']),
+  auth: booleans(true), authStrategies: choices([['jwt-refresh', 'JWT with refresh tokens'], ['session', 'Session'] ], ['jwt-refresh']),
   rbac: booleans(), navigation: choices([['none', 'None'], ['dynamic', 'Dynamic']], ['none']),
   audit: booleans(), redis: booleans(), docker: booleans(), queue: booleans(), realtime: booleans(),
   apiDocs: booleans(), smtp: booleans(), uploads: booleans(), generatedTests: booleans(), logging: booleans(),
@@ -58,7 +58,6 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   const matches = (path: string, value: string, supported: string) => { if (value !== supported) unavailable(path, value); };
   matches('project.blueprint', config.project.blueprint, 'blank-fullstack');
   matches('project.shape', config.project.shape, 'fullstack');
-  matches('project.profile', config.project.profile, 'minimal');
   matches('repository.layout', config.repository.layout, 'monorepo');
   matches('repository.taskRunner', config.repository.taskRunner, 'none');
   matches('stack.language', config.stack.language, 'typescript');
@@ -66,7 +65,6 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   matches('stack.frontend', config.stack.frontend, 'vue-vite');
   matches('stack.database', config.stack.database, 'postgresql');
   matches('stack.orm', config.stack.orm, 'prisma');
-  matches('company.mode', config.company.mode, 'single');
   matches('company.superAdminScope', config.company.superAdminScope, 'company');
   matches('features.authStrategy', config.features.authStrategy, 'jwt-refresh');
   matches('features.navigation', config.features.navigation, 'none');
@@ -82,7 +80,7 @@ export function validateCompatibility(config: ProjectConfig): CompatibilityIssue
   if (config.features.rbac && !config.features.auth) issues.push({ path: 'features.auth', code: 'FEATURE_DEPENDENCY', message: 'RBAC requires authentication. Enable auth or disable RBAC.' });
   if (config.features.navigation === 'dynamic' && !config.features.rbac) issues.push({ path: 'features.rbac', code: 'FEATURE_DEPENDENCY', message: 'Dynamic navigation requires RBAC. Enable RBAC or disable dynamic navigation.' });
   if (config.features.audit && !config.features.auth) issues.push({ path: 'features.auth', code: 'FEATURE_DEPENDENCY', message: 'User audit events require authentication. Enable auth or disable audit.' });
-  for (const feature of ['auth', 'rbac', 'audit', 'redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit'] as const) {
+  for (const feature of ['rbac', 'audit', 'redis', 'docker', 'queue', 'realtime', 'apiDocs', 'smtp', 'uploads', 'generatedTests', 'logging', 'ciCd', 'rateLimit'] as const) {
     if (config.features[feature]) unavailable(`features.${feature}`, true);
   }
   return issues;

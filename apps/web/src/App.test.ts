@@ -9,7 +9,7 @@ const reason = 'No generator template yet';
 const available = (value: string, label: string) => ({ value, label, available: true });
 const unavailable = (value: string, label: string) => ({ value, label, available: false, reason });
 const catalog = {
-  profiles: [available('minimal', 'Minimal'), unavailable('enterprise', 'Enterprise')],
+  profiles: [available('minimal', 'Minimal'), available('enterprise', 'Enterprise')],
   blueprints: [available('blank-fullstack', 'Blank Fullstack'), unavailable('ecommerce', 'E-commerce')],
   shapes: [available('fullstack', 'Fullstack'), unavailable('api-only', 'API only')],
   layouts: [available('monorepo', 'Monorepo'), unavailable('single-app', 'Single app')],
@@ -19,9 +19,9 @@ const catalog = {
   databases: [available('postgresql', 'PostgreSQL'), unavailable('none', 'No database')],
   orms: [available('prisma', 'Prisma'), unavailable('none', 'No ORM')],
   packageManagers: [available('pnpm', 'pnpm')], taskRunners: [available('none', 'None')],
-  companyModes: [available('single', 'Single company'), unavailable('multi', 'Multiple companies')],
+  companyModes: [available('single', 'Single company'), available('multi', 'Multiple companies')],
   superAdminScopes: [available('company', 'Company'), unavailable('global', 'Global')],
-  auth: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
+  auth: [available('false', 'Disabled'), available('true', 'Enabled')],
   authStrategies: [available('jwt-refresh', 'JWT with refresh tokens'), unavailable('session', 'Session')],
   rbac: [available('false', 'Disabled'), unavailable('true', 'Enabled')],
   navigation: [available('none', 'None'), unavailable('dynamic', 'Dynamic')],

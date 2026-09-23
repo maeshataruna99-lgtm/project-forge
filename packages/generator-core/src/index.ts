@@ -5,6 +5,7 @@ import { Worker } from 'node:worker_threads';
 import { strToU8, zipSync } from 'fflate';
 import { projectConfigSchema, type ProjectConfig } from '@project-forge/contracts';
 import { validateCompatibility, type CompatibilityIssue } from '@project-forge/template-registry';
+import { composeFeatureFiles } from './compose';
 
 const templateRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../templates/typescript-nest-vue');
 const MAX_ARCHIVE_BYTES = 2_000_000;
@@ -24,7 +25,8 @@ const manifest = [
 
 export type GenerationPlan = {
   projectName: string;
-  profile: 'minimal';
+  profile: 'minimal' | 'enterprise';
+  capabilities: string[];
   files: string[];
   theme: { mode: 'light' | 'dark'; primary: string; accent: string };
 };
@@ -65,8 +67,10 @@ function validate(input: unknown): ProjectConfig {
 
 export function createPlan(input: unknown): GenerationPlan {
   const config = validate(input);
+  const featureFiles = composeFeatureFiles(config);
+  const registeredFiles = [...manifest, ...featureFiles.map(file => file.destination)];
   const seen = new Set<string>();
-  for (const path of manifest) {
+  for (const path of registeredFiles) {
     assertSafeArchivePath(path);
     const key = path.toLowerCase();
     if (seen.has(key)) throw new GenerationError();
@@ -74,8 +78,9 @@ export function createPlan(input: unknown): GenerationPlan {
   }
   return {
     projectName: config.project.name,
-    profile: 'minimal',
-    files: [...manifest],
+    profile: config.project.profile,
+    capabilities: config.features.auth || config.project.profile === 'enterprise' ? ['auth', 'company-scope'] : [],
+    files: registeredFiles,
     theme: { mode: config.theme.mode, primary: config.theme.primary, accent: config.theme.accent },
   };
 }
@@ -94,20 +99,59 @@ function readTemplate(path: string): string {
 }
 
 function render(source: string, config: ProjectConfig): string {
+  const auth = config.features.auth || config.project.profile === 'enterprise';
+  const authSchema = auth ? `
+enum CompanyRole {
+  MEMBER
+  ADMIN
+}
+
+model User {
+  id           String              @id @default(cuid())
+  email        String              @unique
+  passwordHash String
+  memberships  CompanyMembership[]
+}
+
+model CompanyMembership {
+  id        String      @id @default(cuid())
+  userId    String
+  companyId String
+  role      CompanyRole @default(MEMBER)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+}
+` : '';
+  const authReadme = auth ? `
+## Authentication and company scope
+
+This profile includes company registration, salted scrypt password hashing, 15-minute HMAC-signed access tokens, seven-day refresh tokens, and a bearer-token guard. Set a private random AUTH_SECRET of at least 32 characters before starting the API. Never commit .env. Use POST /auth/register to create a company administrator, then POST /auth/login with an email, password, and optional company ID. POST /auth/refresh renews the token pair; refresh tokens are stateless and remain valid until expiry, so clients must discard them on logout. Protected routes receive identity from the verified access token. Company queries must use CompanyService.where(identity) or scopedQuery(identity, filters); a client-supplied company ID is checked against the signed identity.
+` : '';
   return source
     .replaceAll('__PROJECT_NAME__', config.project.name)
     .replaceAll('__PRIMARY_COLOR__', config.theme.primary)
     .replaceAll('__ACCENT_COLOR__', config.theme.accent)
-    .replaceAll('__THEME_MODE__', config.theme.mode);
+    .replaceAll('__THEME_MODE__', config.theme.mode)
+    .replaceAll('/*__AUTH_IMPORT__*/', auth ? "import { AuthModule } from './auth/auth.module';" : '')
+    .replaceAll('/*__AUTH_MODULE__*/', auth ? 'AuthModule' : '')
+    .replaceAll('/*__AUTH_SECRET__*/', auth ? 'AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters' : '')
+    .replaceAll('/*__AUTH_PRISMA_SCHEMA__*/', authSchema)
+    .replaceAll('/*__AUTH_README__*/', authReadme);
 }
 
 function prepareFiles(input: unknown): Record<string, Uint8Array> {
   const config = validate(input);
   const plan = createPlan(config);
+  const featureFiles = composeFeatureFiles(config);
+  const sources = new Map(featureFiles.map(file => [file.destination, file.source]));
   const files: Record<string, Uint8Array> = {};
   let totalBytes = 0;
   for (const path of plan.files) {
-    const content = strToU8(render(readTemplate(path), config));
+    const sourcePath = sources.get(path) ?? path;
+    const content = strToU8(render(readTemplate(sourcePath), config));
     totalBytes += content.length;
     if (totalBytes > MAX_SOURCE_BYTES) throw new GenerationError();
     const archivePath = `${plan.projectName}/${path}`;

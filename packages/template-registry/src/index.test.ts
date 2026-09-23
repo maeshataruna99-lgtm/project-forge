@@ -51,22 +51,30 @@ describe('first template registry', () => {
     );
   });
 
-  it('rejects enterprise profile until its template exists', () => {
-    expect(validateCompatibility({ ...base, project: { ...base.project, profile: 'enterprise' } })).toContainEqual(
-      expect.objectContaining({ path: 'project.profile', code: 'TEMPLATE_UNAVAILABLE' }),
-    );
+  it('accepts enterprise profile with its included authentication foundation', () => {
+    expect(validateCompatibility({
+      ...base,
+      project: { ...base.project, profile: 'enterprise' },
+    })).toEqual([]);
   });
 
-  it.each(['auth', 'rbac', 'audit'] as const)('rejects %s until it is generated', feature => {
+  it('accepts authentication when selected', () => {
+    expect(validateCompatibility({ ...base, features: { ...base.features, auth: true } })).toEqual([]);
+  });
+
+  it.each(['rbac', 'audit'] as const)('rejects %s until it is generated', feature => {
     expect(validateCompatibility({ ...base, features: { ...base.features, [feature]: true } })).toContainEqual(
       expect.objectContaining({ path: `features.${feature}`, code: 'FEATURE_UNAVAILABLE' }),
     );
   });
 
-  it('rejects multi-company until company isolation is generated', () => {
-    expect(validateCompatibility({ ...base, company: { ...base.company, mode: 'multi' } })).toContainEqual(
-      expect.objectContaining({ path: 'company.mode', code: 'TEMPLATE_UNAVAILABLE' }),
-    );
+  it('supports multiple companies with authentication enabled', () => {
+    expect(validateCompatibility({
+      ...base,
+      project: { ...base.project, profile: 'enterprise' },
+      company: { ...base.company, mode: 'multi' },
+      features: { ...base.features, auth: true },
+    })).toEqual([]);
   });
 
   it('rejects optional infrastructure with no template fragment yet', () => {

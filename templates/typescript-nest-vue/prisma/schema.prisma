@@ -11,6 +11,7 @@ model Company {
   id    String        @id @default(cuid())
   name  String
   items ExampleItem[]
+  memberships CompanyMembership[]
 }
 
 model ExampleItem {
@@ -21,3 +22,5 @@ model ExampleItem {
 
   @@index([companyId])
 }
+
+/*__AUTH_PRISMA_SCHEMA__*/

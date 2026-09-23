@@ -36,6 +36,18 @@ describe('generation API', () => {
     expect(result.body.projectName).toBe('sample-app');
   });
 
+  it('validates the Enterprise auth path and exposes its registered files', async () => {
+    const enterprise = {
+      ...config,
+      project: { ...config.project, profile: 'enterprise' },
+      features: { ...config.features, auth: true },
+    };
+    const result = await request(app.getHttpServer()).post('/generator/validate').send(enterprise).expect(201);
+    expect(result.body.capabilities).toEqual(['auth', 'company-scope']);
+    expect(result.body.files).toContain('apps/api/src/auth/auth.controller.ts');
+    expect(result.body.files).toContain('apps/api/src/company/company.service.ts');
+  });
+
   it('reports field issues and a correlation ID for unsupported choices', async () => {
     const result = await request(app.getHttpServer()).post('/generator/validate').send({ ...config, features: { ...config.features, audit: true } }).expect(400);
     expect(result.body.code).toBe('INVALID_CONFIGURATION');
