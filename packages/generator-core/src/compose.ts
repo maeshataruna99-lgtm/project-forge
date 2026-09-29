@@ -53,11 +53,11 @@ const auditFiles: RegisteredFile[] = [
   { source: 'fragments/audit/audit.module.ts', destination: 'apps/api/src/audit/audit.module.ts' },
 ];
 const ecommerceFiles: RegisteredFile[] = [
-  { source: 'blueprints/ecommerce/apps/api/src/products/product.ts', destination: 'apps/api/src/products/product.ts' },
-  { source: 'blueprints/ecommerce/apps/api/src/products/products.service.ts', destination: 'apps/api/src/products/products.service.ts' },
-  { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.ts', destination: 'apps/api/src/products/products.controller.ts' },
-  { source: 'blueprints/ecommerce/apps/api/src/products/products.module.ts', destination: 'apps/api/src/products/products.module.ts' },
-  { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.test.ts', destination: 'apps/api/src/products/products.controller.test.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/product.ts', destination: 'apps/api/src/master/products/product.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.service.ts', destination: 'apps/api/src/master/products/products.service.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.ts', destination: 'apps/api/src/master/products/products.controller.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.module.ts', destination: 'apps/api/src/master/products/products.module.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/products/products.controller.test.ts', destination: 'apps/api/src/master/products/products.controller.test.ts' },
 ];
 const redisFiles: RegisteredFile[] = [
   { source: 'fragments/redis/redis.service.ts', destination: 'apps/api/src/redis/redis.service.ts' },
@@ -130,7 +130,7 @@ export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
     files.push(...ecommerceFiles.map(file => config.features.rbac && file.destination.endsWith('products.controller.ts')
       ? { ...file, source: 'blueprints/ecommerce/apps/api/src/products/products.controller.secured.ts' }
       : file));
-    files.push({ source: 'blueprints/ecommerce/fragments/permissions.ts', destination: 'apps/api/src/products/permissions.ts' });
+    files.push({ source: 'blueprints/ecommerce/fragments/permissions.ts', destination: 'apps/api/src/master/products/permissions.ts' });
   }
   return files;
 }

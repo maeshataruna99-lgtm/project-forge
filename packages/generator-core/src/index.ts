@@ -381,7 +381,7 @@ This profile includes company registration, salted scrypt password hashing, 15-m
     .replaceAll(
       "/*__BLUEPRINT_IMPORT__*/",
       ecommerce
-        ? "import { ProductsModule } from './products/products.module';"
+        ? "import { ProductsModule } from './master/products/products.module';"
         : "",
     )
     .replaceAll("/*__BLUEPRINT_MODULE__*/", ecommerce ? ", ProductsModule" : "")

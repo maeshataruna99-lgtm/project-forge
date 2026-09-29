@@ -348,12 +348,13 @@ describe('generator core', () => {
       features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic' },
     };
     const plan = createPlan(ecommerce);
-    expect(plan.files).toContain('apps/api/src/products/products.controller.ts');
+    expect(plan.files).toContain('apps/api/src/master/products/products.controller.ts');
     expect(plan.files).toContain('apps/web/src/App.vue');
     const files = unzipSync(createArchive(ecommerce));
-    expect(Object.keys(files)).toContain('sample-app/apps/api/src/products/products.controller.test.ts');
-    expect(strFromU8(files['sample-app/apps/api/src/main.ts']!)).toContain("import { ProductsModule } from './products/products.module';");
-    expect(strFromU8(files['sample-app/apps/api/src/products/products.controller.ts']!)).toContain("@RequirePermission('products:read')");
+    expect(Object.keys(files)).toContain('sample-app/apps/api/src/master/products/products.controller.test.ts');
+    expect(Object.keys(files)).not.toContain('sample-app/apps/api/src/products/products.controller.ts');
+    expect(strFromU8(files['sample-app/apps/api/src/main.ts']!)).toContain("import { ProductsModule } from './master/products/products.module';");
+    expect(strFromU8(files['sample-app/apps/api/src/master/products/products.controller.ts']!)).toContain("@RequirePermission('products:read')");
     expect(strFromU8(files['sample-app/apps/api/src/rbac/permissions.ts']!)).toContain("'products:read'");
     expect(strFromU8(files['sample-app/apps/api/src/rbac/seed-access-control.mjs']!)).toContain("'/products'");
     expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain('fetch("/api/products")');
