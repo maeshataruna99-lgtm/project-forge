@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seedAccessControl } from './seed-access-control.mjs';
+import { seedAccessControl } from './access-control.mjs';
 
 describe('access-control seed', () => {
   it('uses upserts so repeating a seed does not duplicate permissions or navigation', async () => {

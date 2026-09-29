@@ -238,7 +238,7 @@ describe('generator core', () => {
     expect(plan.files).toContain('apps/api/src/navigation/navigation.controller.ts');
     expect(plan.files).toContain('apps/api/src/audit/audit.service.ts');
     expect(plan.files).toContain('apps/api/src/audit/audit.controller.ts');
-    expect(plan.files).toContain('apps/api/src/rbac/seed-access-control.test.ts');
+    expect(plan.files).toContain('prisma/seed/access-control.test.ts');
     expect(plan.files).toContain('apps/web/src/components/StarterAuth.vue');
     const files = unzipSync(createArchive(secured));
     const main = strFromU8(files['sample-app/apps/api/src/main.ts']!);
@@ -249,7 +249,10 @@ describe('generator core', () => {
     expect(schema).toContain('model Permission');
     expect(schema).toContain('model NavigationItem');
     expect(schema).toContain('model AuditEvent');
-    expect(JSON.parse(strFromU8(files['sample-app/package.json']!)).scripts['db:seed']).toBe('node prisma/seed.mjs');
+    expect(JSON.parse(strFromU8(files['sample-app/package.json']!)).scripts['db:seed']).toBe('node prisma/seed/index.mjs');
+    expect(Object.keys(files)).toContain('sample-app/prisma/seed/access-control.mjs');
+    expect(Object.keys(files)).toContain('sample-app/prisma/seed/index.mjs');
+    expect(strFromU8(files['sample-app/prisma/seed/index.mjs']!)).toContain('access-control.mjs');
     const authUi = strFromU8(files['sample-app/apps/web/src/components/StarterAuth.vue']!);
     expect(authUi).toContain("fetch('/api/navigation'");
     expect(authUi).toContain('accessToken.value = result.accessToken');
@@ -257,6 +260,8 @@ describe('generator core', () => {
     expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain('<StarterAuth />');
     expect(Object.values(files).some(file => strFromU8(file).includes('__'))).toBe(false);
     expect(createPlan(config).files).not.toContain('apps/api/src/rbac/permission.guard.ts');
+    const unseeded = unzipSync(createArchive(config));
+    expect(Object.keys(unseeded).some(path => path.startsWith('sample-app/prisma/seed/'))).toBe(false);
   });
 
   it('distinguishes malformed input from an unavailable template', () => {
@@ -356,7 +361,7 @@ describe('generator core', () => {
     expect(strFromU8(files['sample-app/apps/api/src/main.ts']!)).toContain("import { ProductsModule } from './master/products/products.module';");
     expect(strFromU8(files['sample-app/apps/api/src/master/products/products.controller.ts']!)).toContain("@RequirePermission('products:read')");
     expect(strFromU8(files['sample-app/apps/api/src/rbac/permissions.ts']!)).toContain("'products:read'");
-    expect(strFromU8(files['sample-app/apps/api/src/rbac/seed-access-control.mjs']!)).toContain("'/products'");
+    expect(strFromU8(files['sample-app/prisma/seed/access-control.mjs']!)).toContain("'/products'");
     expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain('fetch("/api/products")');
     expect(strFromU8(files['sample-app/README.md']!)).toContain('not a checkout, payment, inventory, or order system');
   });

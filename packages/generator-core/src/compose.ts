@@ -34,10 +34,10 @@ const rbacFiles: RegisteredFile[] = [
   { source: 'fragments/rbac/permissions.test.ts', destination: 'apps/api/src/rbac/permissions.test.ts' },
   { source: 'fragments/rbac/projects.controller.ts', destination: 'apps/api/src/rbac/projects.controller.ts' },
   { source: 'fragments/rbac/rbac.module.ts', destination: 'apps/api/src/rbac/rbac.module.ts' },
-  { source: 'fragments/rbac/seed-access-control.mjs', destination: 'apps/api/src/rbac/seed-access-control.mjs' },
-  { source: 'fragments/rbac/seed-access-control.d.ts', destination: 'apps/api/src/rbac/seed-access-control.d.ts' },
-  { source: 'fragments/rbac/seed-access-control.test.ts', destination: 'apps/api/src/rbac/seed-access-control.test.ts' },
-  { source: 'fragments/rbac/seed.mjs', destination: 'prisma/seed.mjs' },
+  { source: 'fragments/rbac/seed/access-control.mjs', destination: 'prisma/seed/access-control.mjs' },
+  { source: 'fragments/rbac/seed/access-control.d.ts', destination: 'prisma/seed/access-control.d.ts' },
+  { source: 'fragments/rbac/seed/access-control.test.ts', destination: 'prisma/seed/access-control.test.ts' },
+  { source: 'fragments/rbac/seed/index.mjs', destination: 'prisma/seed/index.mjs' },
 ];
 const navigationFiles: RegisteredFile[] = [
   { source: 'fragments/navigation/navigation.service.ts', destination: 'apps/api/src/navigation/navigation.service.ts' },

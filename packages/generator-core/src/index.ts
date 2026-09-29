@@ -209,7 +209,7 @@ Successful authenticated write requests create company-scoped audit events. Meta
 `
     : "";
   const seedCommand = config.features.rbac
-    ? "node prisma/seed.mjs"
+    ? "node prisma/seed/index.mjs"
     : "echo No RBAC seed data selected";
   const seedNavigation =
     config.features.navigation === "dynamic" ? "true" : "false";

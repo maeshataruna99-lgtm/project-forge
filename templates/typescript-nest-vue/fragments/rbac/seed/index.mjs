@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { seedAccessControl } from '../apps/api/src/rbac/seed-access-control.mjs';
+import { seedAccessControl } from './access-control.mjs';
 
 const prisma = new PrismaClient();
 try {
