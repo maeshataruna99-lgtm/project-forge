@@ -214,6 +214,14 @@ Successful authenticated write requests create company-scoped audit events. Meta
   const seedNavigation =
     config.features.navigation === "dynamic" ? "true" : "false";
   const ecommerce = config.project.blueprint === "ecommerce";
+  const employeeEnabled = config.stack.backend === "nestjs" && config.stack.database === "postgresql" && (config.company.mode === "single" || auth);
+  const appModules = [
+    ...(auth ? ["AuthModule"] : []),
+    ...featureModules.split(", ").filter(Boolean),
+    ...(employeeEnabled ? ["EmployeeModule"] : []),
+    ...(ecommerce ? ["ProductsModule"] : []),
+    ...integrationModules.split(", ").filter(Boolean),
+  ].join(", ");
   const ecommercePermissionCodes = ecommerce
     ? "['products:read', 'products:manage']"
     : "[]";
@@ -469,6 +477,9 @@ This profile includes company registration, salted scrypt password hashing, 15-m
       auth ? "import { AuthModule } from './auth/auth.module';" : "",
     )
     .replaceAll("/*__AUTH_MODULE__*/", auth ? "AuthModule" : "")
+    .replaceAll("/*__MASTER_IMPORT__*/", employeeEnabled ? "import { EmployeeModule } from './master/employee/employee.module';" : "")
+    .replaceAll("/*__MASTER_MODULE__*/", employeeEnabled ? "EmployeeModule" : "")
+    .replaceAll("/*__APP_MODULES__*/", appModules)
     .replaceAll("/*__FEATURE_IMPORTS__*/", featureImports)
     .replaceAll(
       "/*__FEATURE_MODULES__*/",

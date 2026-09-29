@@ -1,6 +1,17 @@
 import type { ProjectConfig } from '@project-forge/contracts';
 
 export type RegisteredFile = { source: string; destination: string };
+const databaseFiles: RegisteredFile[] = [
+  { source: 'fragments/database/prisma.service.ts', destination: 'apps/api/src/database/prisma.service.ts' },
+  { source: 'fragments/database/prisma.module.ts', destination: 'apps/api/src/database/prisma.module.ts' },
+];
+const employeeFiles: RegisteredFile[] = [
+  { source: 'fragments/master/employee/dto/create-employee.dto.ts', destination: 'apps/api/src/master/employee/dto/create-employee.dto.ts' },
+  { source: 'fragments/master/employee/dto/update-employee.dto.ts', destination: 'apps/api/src/master/employee/dto/update-employee.dto.ts' },
+  { source: 'fragments/master/employee/employee.controller.ts', destination: 'apps/api/src/master/employee/employee.controller.ts' },
+  { source: 'fragments/master/employee/employee.service.ts', destination: 'apps/api/src/master/employee/employee.service.ts' },
+  { source: 'fragments/master/employee/employee.module.ts', destination: 'apps/api/src/master/employee/employee.module.ts' },
+];
 
 const authFiles: RegisteredFile[] = [
   { source: 'fragments/auth/StarterAuth.vue', destination: 'apps/web/src/components/StarterAuth.vue' },
@@ -84,6 +95,18 @@ const rateLimitFiles: RegisteredFile[] = [
 
 export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
   const files: RegisteredFile[] = [];
+  const nestDatabase = config.stack.backend === 'nestjs' && config.stack.database === 'postgresql';
+  const hasAuth = config.features.auth || config.project.profile === 'enterprise';
+  const employeeEnabled = nestDatabase && (config.company.mode === 'single' || hasAuth);
+  if (nestDatabase) files.push(...databaseFiles);
+  if (employeeEnabled) {
+    files.push(...employeeFiles.map(file => {
+      if (!hasAuth) return file;
+      if (file.destination.endsWith('/employee.controller.ts')) return { ...file, source: 'fragments/master/employee/employee.controller.secured.ts' };
+      if (file.destination.endsWith('/employee.module.ts')) return { ...file, source: 'fragments/master/employee/employee.module.secured.ts' };
+      return file;
+    }));
+  }
   if ((config.features.auth || config.project.profile === 'enterprise') && config.project.shape !== 'frontend-only') {
     files.push(...authFiles.filter(file => config.project.shape !== 'api-only' || !file.destination.startsWith('apps/web/')));
   }

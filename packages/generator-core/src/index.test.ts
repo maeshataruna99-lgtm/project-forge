@@ -27,6 +27,69 @@ describe('generator core', () => {
     expect(plan.files).toContain('prisma/schema.prisma');
   });
 
+  it('generates the employee master module and architecture guide in database-backed NestJS projects', () => {
+    const files = unzipSync(createArchive(config));
+    const paths = Object.keys(files);
+    expect(paths).toEqual(expect.arrayContaining([
+      'sample-app/apps/api/src/master/employee/dto/create-employee.dto.ts',
+      'sample-app/apps/api/src/master/employee/dto/update-employee.dto.ts',
+      'sample-app/apps/api/src/master/employee/employee.controller.ts',
+      'sample-app/apps/api/src/master/employee/employee.service.ts',
+      'sample-app/apps/api/src/master/employee/employee.module.ts',
+      'sample-app/apps/api/src/database/prisma.module.ts',
+      'sample-app/apps/api/src/database/prisma.service.ts',
+      'sample-app/docs/architecture/backend-modules.md',
+    ]));
+    const main = strFromU8(files['sample-app/apps/api/src/main.ts']!);
+    expect(main).toContain("import { EmployeeModule } from './master/employee/employee.module';");
+    expect(main).toContain('EmployeeModule');
+    expect(main).toContain('new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true })');
+    const schema = strFromU8(files['sample-app/prisma/schema.prisma']!);
+    expect(schema).toContain('model Employee');
+    const manifest = JSON.parse(strFromU8(files['sample-app/apps/api/package.json']!));
+    expect(manifest.dependencies).toHaveProperty('class-validator');
+    expect(manifest.dependencies).toHaveProperty('class-transformer');
+    expect(strFromU8(files['sample-app/docs/architecture/backend-modules.md']!)).toContain('apps/api/src/transaction/<module>');
+  });
+  it('keeps module guidance in database-free NestJS APIs but excludes it from frontend and Laravel output', () => {
+    const apiNoDatabase = {
+      ...config,
+      project: { ...config.project, shape: 'api-only' },
+      stack: { ...config.stack, frontend: 'none', database: 'none', orm: 'none' },
+    };
+    const apiFiles = unzipSync(createArchive(apiNoDatabase));
+    expect(Object.keys(apiFiles)).toContain('sample-app/docs/architecture/backend-modules.md');
+    expect(Object.keys(apiFiles)).not.toContain('sample-app/apps/api/src/master/employee/employee.module.ts');
+    expect(Object.keys(apiFiles)).not.toContain('sample-app/apps/api/src/database/prisma.module.ts');
+
+    const frontendOnly = {
+      ...config,
+      project: { ...config.project, shape: 'frontend-only' },
+      stack: { language: 'typescript', backend: 'none', frontend: 'vue-vite', database: 'none', orm: 'none' },
+      dataMode: 'demo',
+    };
+    expect(Object.keys(unzipSync(createArchive(frontendOnly)))).not.toContain('sample-app/docs/architecture/backend-modules.md');
+  });
+
+  it('only emits multi-company employee APIs with auth and scopes them to the authenticated company', () => {
+    const multiCompany = {
+      ...config,
+      company: { ...config.company, mode: 'multi' },
+      features: { ...config.features, auth: true },
+    };
+    const files = unzipSync(createArchive(multiCompany));
+    const controller = strFromU8(files['sample-app/apps/api/src/master/employee/employee.controller.ts']!);
+    expect(controller).toContain('@UseGuards(AuthGuard)');
+    expect(controller).toContain('request.user.companyId');
+    const dto = strFromU8(files['sample-app/apps/api/src/master/employee/dto/create-employee.dto.ts']!);
+    expect(dto).not.toContain('companyId');
+
+    const unguardedMultiCompany = {
+      ...multiCompany,
+      features: { ...multiCompany.features, auth: false },
+    };
+    expect(Object.keys(unzipSync(createArchive(unguardedMultiCompany)))).not.toContain('sample-app/apps/api/src/master/employee/employee.module.ts');
+  });
   it('generates an isolated Laravel API pack with Composer and no TypeScript workspace files', () => {
     const laravel = {
       ...config,

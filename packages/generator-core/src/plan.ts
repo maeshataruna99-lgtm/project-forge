@@ -26,6 +26,7 @@ const baseManifest = [
   "apps/api/src/main.ts",
   "apps/api/src/health.controller.ts",
   "apps/api/src/health.controller.test.ts",
+  "docs/architecture/backend-modules.md",
   "apps/web/package.json",
   "apps/web/index.html",
   "apps/web/tsconfig.json",
@@ -51,6 +52,7 @@ const apiManifest = [
   "apps/api/src/main.ts",
   "apps/api/src/health.controller.ts",
   "apps/api/src/health.controller.test.ts",
+  "docs/architecture/backend-modules.md",
 ] as const;
 const apiNoDatabaseManifest = apiManifest.filter(
   (path) => !path.startsWith("packages/contracts/"),
@@ -81,6 +83,7 @@ const singleApiManifest = [
   "apps/api/src/main.ts",
   "apps/api/src/health.controller.ts",
   "apps/api/src/health.controller.test.ts",
+  "docs/architecture/backend-modules.md",
 ] as const;
 const singleFrontendManifest = [
   ".gitignore",

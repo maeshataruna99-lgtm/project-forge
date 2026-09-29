@@ -10,7 +10,8 @@ datasource db {
 model Company {
   id    String        @id @default(cuid())
   name  String
-  items ExampleItem[]
+  items     ExampleItem[]
+  employees Employee[]
   /*__AUTH_COMPANY_RELATION__*/
   /*__AUDIT_COMPANY_RELATION__*/
 }
@@ -22,6 +23,20 @@ model ExampleItem {
   title     String
 
   @@index([companyId])
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  position  String
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([name])
 }
 
 /*__AUTH_PRISMA_SCHEMA__*/
