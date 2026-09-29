@@ -50,6 +50,10 @@ describe('generator core', () => {
     expect(manifest.dependencies).toHaveProperty('class-validator');
     expect(manifest.dependencies).toHaveProperty('class-transformer');
     expect(strFromU8(files['sample-app/docs/architecture/backend-modules.md']!)).toContain('apps/api/src/transaction/<module>');
+    expect(strFromU8(files['sample-app/README.md']!)).toContain('Employee');
+    expect(strFromU8(files['sample-app/apps/api/src/master/employee/dto/create-employee.dto.ts']!)).toContain('@IsEmail()');
+    expect(strFromU8(files['sample-app/apps/api/src/master/employee/dto/update-employee.dto.ts']!)).toContain('@IsOptional()');
+    expect(strFromU8(files['sample-app/apps/api/src/master/employee/employee.service.ts']!)).toContain('where: { id, ...(companyId ? { companyId } : {}) }');
   });
   it('keeps module guidance in database-free NestJS APIs but excludes it from frontend and Laravel output', () => {
     const apiNoDatabase = {
@@ -257,6 +261,7 @@ describe('generator core', () => {
     expect(authUi).toContain("fetch('/api/navigation'");
     expect(authUi).toContain('accessToken.value = result.accessToken');
     expect(authUi).not.toContain('localStorage');
+    expect(strFromU8(files['sample-app/README.md']!)).toContain('prisma/seed/index.mjs');
     expect(strFromU8(files['sample-app/apps/web/src/App.vue']!)).toContain('<StarterAuth />');
     expect(Object.values(files).some(file => strFromU8(file).includes('__'))).toBe(false);
     expect(createPlan(config).files).not.toContain('apps/api/src/rbac/permission.guard.ts');
@@ -323,6 +328,9 @@ describe('generator core', () => {
     const apiFiles = unzipSync(createArchive(apiOnly));
     const frontendFiles = unzipSync(createArchive(frontendOnly));
     expect(Object.keys(apiFiles)).toContain('sample-app/apps/api/src/main.ts');
+    expect(Object.keys(apiFiles)).toContain('sample-app/apps/api/src/master/employee/employee.module.ts');
+    expect(Object.keys(apiFiles)).toContain('sample-app/apps/api/src/database/prisma.module.ts');
+    expect(Object.keys(apiFiles)).toContain('sample-app/docs/architecture/backend-modules.md');
     expect(Object.keys(apiFiles).some(path => path.includes('/apps/web/'))).toBe(false);
     expect(Object.keys(apiFiles)).not.toContain('sample-app/pnpm-workspace.yaml');
     expect(JSON.parse(strFromU8(apiFiles['sample-app/package.json']!)).scripts.dev).toContain('apps/api/src/main.ts');
@@ -357,6 +365,10 @@ describe('generator core', () => {
     expect(plan.files).toContain('apps/web/src/App.vue');
     const files = unzipSync(createArchive(ecommerce));
     expect(Object.keys(files)).toContain('sample-app/apps/api/src/master/products/products.controller.test.ts');
+    const unguardedEcommerce = { ...config, project: { ...config.project, blueprint: 'ecommerce' } };
+    const unguardedFiles = unzipSync(createArchive(unguardedEcommerce));
+    expect(Object.keys(unguardedFiles)).toContain('sample-app/apps/api/src/master/products/products.module.ts');
+    expect(Object.keys(unguardedFiles).some(path => path.startsWith('sample-app/prisma/seed/'))).toBe(false);
     expect(Object.keys(files)).not.toContain('sample-app/apps/api/src/products/products.controller.ts');
     expect(strFromU8(files['sample-app/apps/api/src/main.ts']!)).toContain("import { ProductsModule } from './master/products/products.module';");
     expect(strFromU8(files['sample-app/apps/api/src/master/products/products.controller.ts']!)).toContain("@RequirePermission('products:read')");

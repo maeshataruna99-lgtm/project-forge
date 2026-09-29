@@ -198,7 +198,7 @@ model AuditEvent {
     ? `
 ## Role based permissions
 
-The API protects project reads and writes with server side permission guards. Members can read projects; company administrators can also write projects, manage members and settings, and read audit events. Re-run pnpm db:seed safely to upsert the permission and role mappings.
+The API protects project reads and writes with server side permission guards. Members can read projects; company administrators can also write projects, manage members and settings, and read audit events. Re-run pnpm db:seed safely to upsert the permission and role mappings. The entrypoint is prisma/seed/index.mjs, with access-control logic alongside it under prisma/seed/.
 `
     : "";
   const auditReadme = config.features.audit

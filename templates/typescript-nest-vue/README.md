@@ -16,5 +16,5 @@ pnpm build
 pnpm test
 ```
 
-The Prisma schema provides `Company` and `ExampleItem` as starting models.
+The Prisma schema provides `Company`, `ExampleItem`, and `Employee` as starting models when PostgreSQL is selected. E-commerce adds `Product`.
 The Vue app reads `/api/health` through Vite's development proxy. Configure the same `/api` reverse proxy when deploying the built frontend.
