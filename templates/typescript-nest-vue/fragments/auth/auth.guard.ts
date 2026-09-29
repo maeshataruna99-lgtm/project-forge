@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService, type AuthIdentity } from './auth.service';
 
@@ -6,7 +6,7 @@ type AuthenticatedRequest = Request & { user?: AuthIdentity };
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly auth: AuthService) {}
+  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();

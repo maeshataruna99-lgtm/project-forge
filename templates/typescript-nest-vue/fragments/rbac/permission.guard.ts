@@ -1,4 +1,4 @@
-import { CanActivate, createParamDecorator, ExecutionContext, ForbiddenException, Injectable, SetMetadata } from '@nestjs/common';
+import { CanActivate, createParamDecorator, ExecutionContext, ForbiddenException, Inject, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { hasPermission, type PermissionCode } from './permissions';
@@ -12,7 +12,7 @@ export const CurrentIdentity = createParamDecorator((_data: unknown, context: Ex
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const required = this.reflector.getAllAndOverride<PermissionCode>(REQUIRED_PERMISSION, [context.getHandler(), context.getClass()]);

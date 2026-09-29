@@ -28,11 +28,16 @@ describe('generator core', () => {
   });
 
   it('generates the employee master module and architecture guide in database-backed NestJS projects', () => {
+    const plan = createPlan(config);
+    expect(plan.files).toContain('apps/api/src/master/employee/dto/create-employee.dto.ts');
+    expect(plan.files).toContain('apps/api/src/master/employee/employee.service.test.ts');
     const files = unzipSync(createArchive(config));
     const paths = Object.keys(files);
     expect(paths).toEqual(expect.arrayContaining([
       'sample-app/apps/api/src/master/employee/dto/create-employee.dto.ts',
       'sample-app/apps/api/src/master/employee/dto/update-employee.dto.ts',
+      'sample-app/apps/api/src/master/employee/employee.dto.test.ts',
+      'sample-app/apps/api/src/master/employee/employee.service.test.ts',
       'sample-app/apps/api/src/master/employee/employee.controller.ts',
       'sample-app/apps/api/src/master/employee/employee.service.ts',
       'sample-app/apps/api/src/master/employee/employee.module.ts',
@@ -52,8 +57,9 @@ describe('generator core', () => {
     expect(strFromU8(files['sample-app/docs/architecture/backend-modules.md']!)).toContain('apps/api/src/transaction/<module>');
     expect(strFromU8(files['sample-app/README.md']!)).toContain('Employee');
     expect(strFromU8(files['sample-app/apps/api/src/master/employee/dto/create-employee.dto.ts']!)).toContain('@IsEmail()');
-    expect(strFromU8(files['sample-app/apps/api/src/master/employee/dto/update-employee.dto.ts']!)).toContain('@IsOptional()');
+    expect(strFromU8(files['sample-app/apps/api/src/master/employee/dto/update-employee.dto.ts']!)).toContain('@ValidateIf((_object, value) => value !== undefined)');
     expect(strFromU8(files['sample-app/apps/api/src/master/employee/employee.service.ts']!)).toContain('where: { id, ...(companyId ? { companyId } : {}) }');
+    expect(strFromU8(files['sample-app/apps/api/src/master/employee/employee.controller.ts']!)).toContain('expectedType: CreateEmployeeDto');
   });
   it('keeps module guidance in database-free NestJS APIs but excludes it from frontend and Laravel output', () => {
     const apiNoDatabase = {
@@ -107,6 +113,7 @@ describe('generator core', () => {
     expect(plan.files).toContain('artisan');
     expect(plan.files).toContain('routes/api.php');
     expect(plan.files).not.toContain('package.json');
+    expect(plan.files).not.toContain('docs/architecture/backend-modules.md');
     const files = unzipSync(createArchive(laravel));
     expect(strFromU8(files['sample-app/composer.json']!)).toContain('laravel/framework');
     expect(Object.keys(files).some(path => path.endsWith('.ts') || path.endsWith('.vue'))).toBe(false);
@@ -257,6 +264,7 @@ describe('generator core', () => {
     expect(Object.keys(files)).toContain('sample-app/prisma/seed/access-control.mjs');
     expect(Object.keys(files)).toContain('sample-app/prisma/seed/index.mjs');
     expect(strFromU8(files['sample-app/prisma/seed/index.mjs']!)).toContain('access-control.mjs');
+    expect(createPlan(config).files).not.toContain('prisma/seed/access-control.test.ts');
     const authUi = strFromU8(files['sample-app/apps/web/src/components/StarterAuth.vue']!);
     expect(authUi).toContain("fetch('/api/navigation'");
     expect(authUi).toContain('accessToken.value = result.accessToken');
@@ -267,6 +275,62 @@ describe('generator core', () => {
     expect(createPlan(config).files).not.toContain('apps/api/src/rbac/permission.guard.ts');
     const unseeded = unzipSync(createArchive(config));
     expect(Object.keys(unseeded).some(path => path.startsWith('sample-app/prisma/seed/'))).toBe(false);
+  });
+
+  it('seeds every generated permission and grant idempotently and respects navigation selection', async () => {
+    const ecommerce = {
+      ...config,
+      project: { ...config.project, blueprint: 'ecommerce' },
+      features: { ...config.features, auth: true, rbac: true, navigation: 'dynamic' },
+    };
+    const files = unzipSync(createArchive(ecommerce));
+    const seedSource = strFromU8(files['sample-app/prisma/seed/access-control.mjs']!);
+    const { seedAccessControl } = await import(`data:text/javascript,${encodeURIComponent(seedSource)}`) as {
+      seedAccessControl: (prisma: unknown, options?: { seedNavigation?: boolean }) => Promise<void>;
+    };
+    const permissions = new Map<string, { id: string; code: string }>();
+    const grants = new Set<string>();
+    const navigation = new Map<string, { key: string; href: string; requiredPermission: string }>();
+    const prisma = {
+      permission: { upsert: async ({ where, create }: { where: { code: string }; create: { code: string } }) => {
+        const row = permissions.get(where.code) ?? { id: `permission-${where.code}`, code: create.code };
+        permissions.set(where.code, row);
+        return row;
+      } },
+      rolePermission: { upsert: async ({ where }: { where: { role_permissionId: { role: string; permissionId: string } } }) => {
+        grants.add(`${where.role_permissionId.role}:${where.role_permissionId.permissionId}`);
+      } },
+      navigationItem: { upsert: async ({ where, create }: { where: { key: string }; create: { key: string; href: string; requiredPermission: string } }) => {
+        const row = navigation.get(where.key) ?? create;
+        navigation.set(where.key, row);
+        return row;
+      } },
+    };
+
+    await seedAccessControl(prisma, { seedNavigation: true });
+    expect([...permissions.keys()]).toEqual(expect.arrayContaining([
+      'projects:read', 'projects:write', 'users:manage', 'settings:manage', 'audit:read',
+      'products:read', 'products:manage',
+    ]));
+    for (const permission of permissions.values()) expect(grants).toContain(`ADMIN:${permission.id}`);
+    expect(grants).toContain('MEMBER:permission-projects:read');
+    expect(grants).toContain('MEMBER:permission-products:read');
+    expect([...navigation.keys()]).toEqual(expect.arrayContaining(['projects', 'team', 'settings', 'audit', 'products']));
+    expect(navigation.get('products')).toMatchObject({ href: '/products', requiredPermission: 'products:read' });
+    const totals = [permissions.size, grants.size, navigation.size];
+    await seedAccessControl(prisma, { seedNavigation: true });
+    expect([permissions.size, grants.size, navigation.size]).toEqual(totals);
+
+    const navigationDisabled = new Map<string, unknown>();
+    const noNavigationPrisma = {
+      ...prisma,
+      navigationItem: { upsert: async ({ where, create }: { where: { key: string }; create: unknown }) => {
+        navigationDisabled.set(where.key, create);
+        return create;
+      } },
+    };
+    await seedAccessControl(noNavigationPrisma, { seedNavigation: false });
+    expect(navigationDisabled.size).toBe(0);
   });
 
   it('distinguishes malformed input from an unavailable template', () => {
@@ -365,9 +429,13 @@ describe('generator core', () => {
     expect(plan.files).toContain('apps/web/src/App.vue');
     const files = unzipSync(createArchive(ecommerce));
     expect(Object.keys(files)).toContain('sample-app/apps/api/src/master/products/products.controller.test.ts');
+    expect(strFromU8(files['sample-app/apps/api/src/master/products/products.module.ts']!)).toContain("import { AuthModule } from '../../auth/auth.module';");
+    expect(strFromU8(files['sample-app/apps/api/src/master/products/products.module.ts']!)).toContain("import { RbacModule } from '../../rbac/rbac.module';");
     const unguardedEcommerce = { ...config, project: { ...config.project, blueprint: 'ecommerce' } };
     const unguardedFiles = unzipSync(createArchive(unguardedEcommerce));
     expect(Object.keys(unguardedFiles)).toContain('sample-app/apps/api/src/master/products/products.module.ts');
+    expect(strFromU8(unguardedFiles['sample-app/apps/api/src/master/products/products.module.ts']!)).not.toContain('AuthModule');
+    expect(strFromU8(unguardedFiles['sample-app/apps/api/src/master/products/products.module.ts']!)).not.toContain('RbacModule');
     expect(Object.keys(unguardedFiles).some(path => path.startsWith('sample-app/prisma/seed/'))).toBe(false);
     expect(Object.keys(files)).not.toContain('sample-app/apps/api/src/products/products.controller.ts');
     expect(strFromU8(files['sample-app/apps/api/src/main.ts']!)).toContain("import { ProductsModule } from './master/products/products.module';");

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import type { Request } from 'express';
 import { AuthGuard } from './auth.guard';
@@ -9,7 +9,7 @@ type AuthenticatedRequest = Request & { user: AuthIdentity };
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService, private readonly prisma: PrismaClient) {}
+  constructor(@Inject(AuthService) private readonly auth: AuthService, @Inject(PrismaClient) private readonly prisma: PrismaClient) {}
 
   @Post('register')
   @UseGuards(AuthRateLimitGuard)

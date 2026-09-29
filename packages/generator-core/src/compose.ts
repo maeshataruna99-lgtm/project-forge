@@ -8,6 +8,8 @@ const databaseFiles: RegisteredFile[] = [
 const employeeFiles: RegisteredFile[] = [
   { source: 'fragments/master/employee/dto/create-employee.dto.ts', destination: 'apps/api/src/master/employee/dto/create-employee.dto.ts' },
   { source: 'fragments/master/employee/dto/update-employee.dto.ts', destination: 'apps/api/src/master/employee/dto/update-employee.dto.ts' },
+  { source: 'fragments/master/employee/employee.dto.test.ts', destination: 'apps/api/src/master/employee/employee.dto.test.ts' },
+  { source: 'fragments/master/employee/employee.service.test.ts', destination: 'apps/api/src/master/employee/employee.service.test.ts' },
   { source: 'fragments/master/employee/employee.controller.ts', destination: 'apps/api/src/master/employee/employee.controller.ts' },
   { source: 'fragments/master/employee/employee.service.ts', destination: 'apps/api/src/master/employee/employee.service.ts' },
   { source: 'fragments/master/employee/employee.module.ts', destination: 'apps/api/src/master/employee/employee.module.ts' },
@@ -57,6 +59,7 @@ const ecommerceFiles: RegisteredFile[] = [
   { source: 'blueprints/ecommerce/apps/api/src/master/products/products.service.ts', destination: 'apps/api/src/master/products/products.service.ts' },
   { source: 'blueprints/ecommerce/apps/api/src/master/products/products.controller.ts', destination: 'apps/api/src/master/products/products.controller.ts' },
   { source: 'blueprints/ecommerce/apps/api/src/master/products/products.module.ts', destination: 'apps/api/src/master/products/products.module.ts' },
+  { source: 'blueprints/ecommerce/apps/api/src/master/products/products.module.secured.ts', destination: 'apps/api/src/master/products/products.module.secured.ts' },
   { source: 'blueprints/ecommerce/apps/api/src/master/products/products.controller.test.ts', destination: 'apps/api/src/master/products/products.controller.test.ts' },
 ];
 const redisFiles: RegisteredFile[] = [
@@ -127,9 +130,17 @@ export function composeFeatureFiles(config: ProjectConfig): RegisteredFile[] {
     destination: '.github/workflows/verify-generated.yml',
   });
   if (config.project.blueprint === 'ecommerce') {
-    files.push(...ecommerceFiles.map(file => config.features.rbac && file.destination.endsWith('products.controller.ts')
-      ? { ...file, source: 'blueprints/ecommerce/apps/api/src/master/products/products.controller.secured.ts' }
-      : file));
+    files.push(...ecommerceFiles
+      .filter(file => !file.source.endsWith('products.module.secured.ts'))
+      .map(file => {
+        if (config.features.rbac && file.destination.endsWith('products.controller.ts')) {
+          return { ...file, source: 'blueprints/ecommerce/apps/api/src/master/products/products.controller.secured.ts' };
+        }
+        if (config.features.rbac && file.destination.endsWith('products.module.ts')) {
+          return { ...file, source: 'blueprints/ecommerce/apps/api/src/master/products/products.module.secured.ts' };
+        }
+        return file;
+      }));
     files.push({ source: 'blueprints/ecommerce/fragments/permissions.ts', destination: 'apps/api/src/master/products/permissions.ts' });
   }
   return files;

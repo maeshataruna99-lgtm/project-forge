@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, ValidationPipe } from '@nestjs/common';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeeService } from './employee.service';
 
 @Controller('master/employees')
 export class EmployeeController {
-  constructor(private readonly employees: EmployeeService) {}
+  constructor(@Inject(EmployeeService) private readonly employees: EmployeeService) {}
 
   @Get()
   list() {
@@ -18,12 +18,12 @@ export class EmployeeController {
   }
 
   @Post()
-  create(@Body() input: CreateEmployeeDto) {
+  create(@Body(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true, expectedType: CreateEmployeeDto })) input: CreateEmployeeDto) {
     return this.employees.create(input);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() input: UpdateEmployeeDto) {
+  update(@Param('id') id: string, @Body(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true, expectedType: UpdateEmployeeDto })) input: UpdateEmployeeDto) {
     return this.employees.update(id, input);
   }
 

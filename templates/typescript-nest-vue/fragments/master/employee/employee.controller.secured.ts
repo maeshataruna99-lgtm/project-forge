@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, ValidationPipe, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthGuard } from '../../auth/auth.guard';
 import type { AuthIdentity } from '../../auth/auth.service';
@@ -11,7 +11,7 @@ type AuthenticatedRequest = Request & { user: AuthIdentity };
 @Controller('master/employees')
 @UseGuards(AuthGuard)
 export class EmployeeController {
-  constructor(private readonly employees: EmployeeService) {}
+  constructor(@Inject(EmployeeService) private readonly employees: EmployeeService) {}
 
   @Get()
   list(@Req() request: AuthenticatedRequest) {
@@ -24,12 +24,12 @@ export class EmployeeController {
   }
 
   @Post()
-  create(@Body() input: CreateEmployeeDto, @Req() request: AuthenticatedRequest) {
+  create(@Body(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true, expectedType: CreateEmployeeDto })) input: CreateEmployeeDto, @Req() request: AuthenticatedRequest) {
     return this.employees.create(input, request.user.companyId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() input: UpdateEmployeeDto, @Req() request: AuthenticatedRequest) {
+  update(@Param('id') id: string, @Body(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true, expectedType: UpdateEmployeeDto })) input: UpdateEmployeeDto, @Req() request: AuthenticatedRequest) {
     return this.employees.update(id, input, request.user.companyId);
   }
 

@@ -1,6 +1,6 @@
 import type { AuthIdentity } from '../auth/auth.service';
-import { Injectable } from '@nestjs/common';
-import type { PrismaClient } from '@prisma/client';
+import { Inject, Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { hasPermission, type PermissionCode } from '../rbac/permissions';
 
 export type NavigationItem = { key: string; label: string; href: string; permission: PermissionCode };
@@ -18,7 +18,7 @@ export function visibleNavigation(identity: AuthIdentity, items: NavigationItem[
 
 @Injectable()
 export class NavigationService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(@Inject(PrismaClient) private readonly prisma: PrismaClient) {}
 
   async list(identity: AuthIdentity): Promise<NavigationItem[]> {
     const rows = await this.prisma.navigationItem.findMany({ orderBy: { sortOrder: 'asc' } });

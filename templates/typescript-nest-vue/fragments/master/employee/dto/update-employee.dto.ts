@@ -1,18 +1,21 @@
-import { IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, ValidateIf } from 'class-validator';
 
 export class UpdateEmployeeDto {
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsEmail()
+  @IsNotEmpty()
   @MaxLength(254)
   email?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   position?: string;
 }
